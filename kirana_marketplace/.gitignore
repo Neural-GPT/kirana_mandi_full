@@ -1,0 +1,35 @@
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+*.iml
+.idea/
+.vscode/
+*.g.dart
+.DS_Store
+
+# Signing secrets -- never commit these even if the platform folders
+# below are checked in.
+android/key.properties
+**/*.jks
+**/*.keystore
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+
+# dart_defines.txt (or similar) is where you're expected to keep the
+# --dart-define flags mentioned in README.md (ADMIN_ID, ADMIN_PASSWORD,
+# TEXTBEE_API_KEY, TEXTBEE_DEVICE_ID) for local runs -- never commit it.
+dart_defines.txt
+*.env
+
+# Platform folders are generated locally via `flutter create .`
+# Uncomment below if you don't want to commit them to version control:
+# android/
+# ios/
+# web/
+# linux/
+# macos/
+# windows/

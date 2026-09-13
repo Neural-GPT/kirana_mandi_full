@@ -1,0 +1,27 @@
+# Render "Blueprint" spec -- lets you deploy this service (and wire up
+# env vars) via a single "New +" -> "Blueprint" pointing at this repo,
+# instead of clicking through the New Web Service form by hand.
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: kirana-mandi-api
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # paste your Aiven Postgres URI in the Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_ID
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: TEXTBEE_API_KEY
+        sync: false
+      - key: TEXTBEE_DEVICE_ID
+        sync: false
+      - key: CORS_ALLOW_ORIGINS
+        value: "*"

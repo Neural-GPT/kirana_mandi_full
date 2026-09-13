@@ -1,0 +1,48 @@
+name: kirana_mandi
+description: Kirana Mandi - a Flutter marketplace app connecting customers with local kirana stores and neighborhood shops.
+publish_to: 'none'
+version: 0.2.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State management
+  provider: ^6.1.2
+
+  # Local (development/offline-cache) database
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+
+  # Session persistence & lightweight local key-value cache
+  shared_preferences: ^2.3.2
+
+  # Offline / connectivity detection
+  connectivity_plus: ^6.0.5
+
+  # Networking (textbee.dev OTP SMS gateway)
+  http: ^1.2.2
+
+  # Charts for shopkeeper analytics (daily/weekly/monthly revenue)
+  fl_chart: ^0.69.0
+
+  # Utilities
+  uuid: ^4.4.0
+  intl: ^0.19.0
+  url_launcher: ^6.3.0
+
+  # Optional device location for "use current location" on shop setup.
+  # Safe to remove if you don't want the extra native permission setup.
+  geolocator: ^12.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

@@ -15,10 +15,16 @@ services:
         sync: false # paste your Aiven Postgres URI in the Render dashboard
       - key: JWT_SECRET
         generateValue: true
+      # Pre-filled so the admin login screen works immediately after
+      # deploy. These end up in this file/your repo, so change them
+      # (either here or by overriding in the Render dashboard's
+      # Environment tab, which doesn't require a redeploy of this
+      # blueprint) before/after going live if the repo is or might
+      # become public.
       - key: ADMIN_ID
-        sync: false
+        value: innova109
       - key: ADMIN_PASSWORD
-        sync: false
+        value: "019278"
       - key: TEXTBEE_API_KEY
         sync: false
       - key: TEXTBEE_DEVICE_ID

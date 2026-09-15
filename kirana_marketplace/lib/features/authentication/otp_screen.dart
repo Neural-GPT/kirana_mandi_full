@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
-import '../../core/constants/env_config.dart';
 import '../../core/utils/validators.dart';
 import '../../data/repositories/shop_repository.dart';
 import 'auth_controller.dart';
@@ -10,7 +9,18 @@ class OtpScreen extends StatefulWidget {
   final String phone;
   final String role;
   final String? name;
-  const OtpScreen({super.key, required this.phone, required this.role, this.name});
+  // Populated when the backend couldn't/didn't send a real SMS (its
+  // textbee credentials aren't configured) and handed the code back
+  // directly instead -- see HttpAuthRepository.sendOtp. Null means a
+  // real SMS should have gone out.
+  final String? debugOtp;
+  const OtpScreen({
+    super.key,
+    required this.phone,
+    required this.role,
+    this.name,
+    this.debugOtp,
+  });
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -19,6 +29,16 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Dev-mode convenience: pre-fill the code the backend handed back so
+    // there's nothing to copy-paste. Still fully editable/visible.
+    if (widget.debugOtp != null) {
+      _otpController.text = widget.debugOtp!;
+    }
+  }
 
   @override
   void dispose() {
@@ -89,11 +109,38 @@ class _OtpScreenState extends State<OtpScreen> {
                       const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Text(
-                EnvConfig.useTextbeeOtp
+                widget.debugOtp == null
                     ? 'Check your SMS inbox for the code.'
-                    : 'Development build: enter 1234 to continue.',
+                    : 'Dev mode: no SMS gateway is configured, so the code is shown below instead of being texted.',
                 style: const TextStyle(color: Colors.black54),
               ),
+              if (widget.debugOtp != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.amber.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.amber.shade800, size: 20),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Your OTP: ${widget.debugOtp}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               TextFormField(
                 controller: _otpController,

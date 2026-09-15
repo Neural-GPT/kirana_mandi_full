@@ -200,7 +200,15 @@ class _ShopSetupScreenState extends State<ShopSetupScreen> {
               ? null
               : _addressController.text.trim(),
         );
-        await shopRepo.updateShop(updated, requestingUserId: auth.id);
+        var succeeded = false;
+        await runGuarded<void>(
+          context,
+          () async {
+            await shopRepo.updateShop(updated, requestingUserId: auth.id);
+            succeeded = true;
+          },
+        );
+        if (!succeeded) return; // error already shown by runGuarded
         if (mounted) Navigator.pop(context, true);
       } else {
         final shop = ShopModel(
@@ -222,7 +230,8 @@ class _ShopSetupScreenState extends State<ShopSetupScreen> {
               : _addressController.text.trim(),
           createdAt: '',
         );
-        await shopRepo.createShop(shop);
+        final created = await runGuarded(context, () => shopRepo.createShop(shop));
+        if (created == null) return; // error already shown by runGuarded
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
               context, '/shopkeeper/dashboard', (route) => false);

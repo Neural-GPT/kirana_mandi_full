@@ -26,11 +26,12 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthController>();
     final phone = _phoneController.text.trim();
-    await auth.sendOtp(phone);
+    final debugOtp = await auth.sendOtp(phone);
     if (!mounted) return;
     Navigator.pushNamed(context, '/otp', arguments: {
       'phone': phone,
       'role': widget.role,
+      'debugOtp': debugOtp,
     });
   }
 

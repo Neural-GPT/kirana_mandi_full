@@ -13,7 +13,7 @@ import '../models/user_model.dart';
 
 abstract class AuthRepository {
   /// Sends (or in dev, simulates) an OTP to [phone].
-  Future<void> sendOtp(String phone);
+  Future<String?> sendOtp(String phone);
 
   /// Verifies the OTP for [phone].
   ///
@@ -64,13 +64,13 @@ abstract class BaseAuthRepository implements AuthRepository {
   Future<Database> get _db async => DatabaseHelper.instance.database;
 
   @protected
-  Future<void> deliverOtp(String phone);
+  Future<String?> deliverOtp(String phone);
 
   @protected
   Future<bool> checkCode(String phone, String submittedCode);
 
   @override
-  Future<void> sendOtp(String phone) => deliverOtp(phone);
+  Future<String?> sendOtp(String phone) => deliverOtp(phone);
 
   @override
   Future<UserModel> verifyOtp({
@@ -178,11 +178,12 @@ abstract class BaseAuthRepository implements AuthRepository {
 /// textbee.dev API key is supplied.
 class DevAuthRepository extends BaseAuthRepository {
   @override
-  Future<void> deliverOtp(String phone) async {
+  Future<String?> deliverOtp(String phone) async {
     // Nothing to send -- the fixed dev code is documented on the OTP
     // screen itself. Kept async with a short delay so the UI's loading
     // state behaves the same as the real network-backed implementation.
     await Future.delayed(const Duration(milliseconds: 400));
+    return null;
   }
 
   @override
@@ -227,7 +228,7 @@ class TextbeeAuthRepository extends BaseAuthRepository {
   String _generateCode() => (1000 + _random.nextInt(9000)).toString();
 
   @override
-  Future<void> deliverOtp(String phone) async {
+  Future<String?> deliverOtp(String phone) async {
     if (connectivityService != null && !connectivityService!.isOnline) {
       throw OfflineException(
           "You're offline. Connect to the internet to receive an OTP.");

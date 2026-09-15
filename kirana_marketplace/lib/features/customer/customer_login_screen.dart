@@ -32,12 +32,13 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
     final auth = context.read<AuthController>();
     final phone = _phoneController.text.trim();
     final name = _nameController.text.trim();
-    await auth.sendOtp(phone);
+    final debugOtp = await auth.sendOtp(phone);
     if (!mounted) return;
     Navigator.pushNamed(context, '/otp', arguments: {
       'phone': phone,
       'role': AppConstants.roleCustomer,
       'name': name,
+      'debugOtp': debugOtp,
     });
   }
 

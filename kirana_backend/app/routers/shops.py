@@ -36,6 +36,8 @@ def _apply_shop_fields(shop: models.Shop, body: schemas.ShopCreate, db: Session)
     shop.delivery_radius_km = body.delivery_radius_km
     shop.delivery_fee = body.delivery_fee
 
+
+def _apply_shop_services(shop: models.Shop, body: schemas.ShopCreate, db: Session) -> None:
     db.query(models.ShopService).filter(models.ShopService.shop_id == shop.id).delete()
     for service_id in body.service_ids:
         db.add(models.ShopService(shop_id=shop.id, service_id=service_id))
@@ -52,10 +54,14 @@ def create_shop(
         raise HTTPException(status.HTTP_409_CONFLICT, "You already have a shop.")
 
     shop = models.Shop(owner_user_id=user.id, status=SHOP_STATUS_PENDING)
+    _apply_shop_fields(shop, body, db)  # set columns BEFORE flush -- flush
+    # executes the INSERT right away, and several columns (name, phone,
+    # region_id, ...) are NOT NULL, so they must already be set on the
+    # object beforehand.
     db.add(shop)
-    db.flush()  # assigns shop.id (a Python-side column default) before
-    # _apply_shop_fields creates ShopService rows that reference it
-    _apply_shop_fields(shop, body, db)
+    db.flush()  # assigns shop.id (a Python-side column default) so
+    # _apply_shop_services can create ShopService rows that reference it
+    _apply_shop_services(shop, body, db)
     db.commit()
     db.refresh(shop)
     return _shop_to_out(shop, db)
@@ -167,6 +173,7 @@ def update_shop(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "You don't own this shop.")
 
     _apply_shop_fields(shop, body, db)
+    _apply_shop_services(shop, body, db)
     if body.is_available is not None:
         shop.is_available = body.is_available
 

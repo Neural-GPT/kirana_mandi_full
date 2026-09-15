@@ -15,12 +15,11 @@ class HttpAuthRepository implements AuthRepository {
   HttpAuthRepository(this._client);
 
   @override
-  Future<void> sendOtp(String phone) async {
-    await _client.post('/auth/otp/send', body: {'phone': phone});
-    // The backend's debug_otp (only populated when textbee isn't
-    // configured server-side) isn't surfaced here -- local dev without a
-    // deployed backend should use EnvConfig.useRemoteApi == false
-    // (DevAuthRepository) instead, which has its own fixed dev code.
+  Future<String?> sendOtp(String phone) async {
+    final json = await _client.post('/auth/otp/send', body: {'phone': phone});
+    // Populated only when the backend's textbee isn't configured -- a
+    // fresh random code each time, NOT the fixed on-device "1234".
+    return json['debug_otp'] as String?;
   }
 
   @override

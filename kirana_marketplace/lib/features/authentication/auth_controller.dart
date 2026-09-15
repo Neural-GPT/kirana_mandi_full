@@ -63,12 +63,12 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendOtp(String phone) async {
+  Future<String?> sendOtp(String phone) async {
     _busy = true;
     _error = null;
     notifyListeners();
     try {
-      await _authRepository.sendOtp(phone);
+      return await _authRepository.sendOtp(phone);
     } finally {
       _busy = false;
       notifyListeners();

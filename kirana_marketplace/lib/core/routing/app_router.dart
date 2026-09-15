@@ -50,6 +50,7 @@ class AppRouter {
             phone: args['phone'] as String,
             role: args['role'] as String,
             name: args['name'] as String?,
+            debugOtp: args['debugOtp'] as String?,
           ),
         );
 

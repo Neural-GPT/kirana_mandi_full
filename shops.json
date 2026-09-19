@@ -1,8 +1,10 @@
 [
   {
-    "_comment": "Example entry -- replace with real shop_id values copied from each shop's App Deployment screen (Shopkeeper Dashboard > White-Label App > App Deployment > Build Automation Config).",
+    "_comment": "Example entry -- real entries are normally added automatically by the backend when a shopkeeper taps 'Generate My App'. Manual entries here are only for a one-off bulk (re)build of every listed shop on push to main.",
     "shop_id": "00000000-0000-0000-0000-000000000000",
     "app_name": "Example Kirana Store",
-    "primary_color": "2E7D32"
+    "primary_color": "2E7D32",
+    "secondary_color": "",
+    "logo_url": ""
   }
 ]

@@ -122,3 +122,61 @@ deploying:
   link?** on the role-select screen, and (b) build once with
   `--dart-define=SHOP_ID=...` and confirm the app skips straight to that
   shop.
+
+---
+
+## Update: real per-shop APK generation (supersedes "Dynamic" as the primary path)
+
+The Shop Code / runtime-lock flow above still works, but it's no longer
+the primary distribution path — it doesn't change the app's name or icon
+at the system level (home screen/app drawer), and every shop shares one
+Android app identity. The shopkeeper-facing flow is now:
+
+**Shopkeeper Dashboard → App Deployment → "Generate My App"** — kicks off
+a CI build that produces a real, installable, unique APK per shop:
+
+- A unique Android **application id** derived from `shop_id`, so a
+  customer can install several different shops' apps side by side
+  instead of one overwriting another.
+- The **launcher name** (home screen / app drawer / Settings > Apps) set
+  via a Gradle property → `AndroidManifest.xml`'s `android:label`.
+- The **launcher icon** regenerated from the shop's `logo_url` via
+  `flutter_launcher_icons` before the build.
+
+The shopkeeper gets one stable download link (a GitHub Release, updated
+in place on every rebuild) to share directly with customers.
+
+See `PERFORMANCE.md` for the Flutter/Android performance changes made
+alongside this (smaller APKs, image caching, lazy list building, fewer
+rebuilds).
+
+### New/changed files for this
+- `.github/workflows/build_apk.yml` (rewritten) + new
+  `.github/actions/build-shop-apk/action.yml` — the actual build/publish
+  logic, shared between manual dispatch, backend-triggered dispatch, and
+  the `shops.json` bulk path.
+- `kirana_backend/app/github_deploy.py` (new), `routers/deploy.py` (new,
+  `POST /shops/{id}/generate-apk` + `GET /shops/{id}/apk-status`),
+  `config.py` (`GITHUB_TOKEN`/`GITHUB_REPO`/etc).
+- `kirana_marketplace/lib/data/repositories/deployment_repository.dart`
+  (new), `features/shopkeeper/app_deployment_screen.dart` (rewritten
+  with a "Generate My App" primary flow + build-status polling).
+- `android/app/build.gradle.kts` + `AndroidManifest.xml` — Gradle
+  properties (`shopAppId`, `shopAppLabel`) driving the system-level
+  application id and launcher label; release minify/shrink enabled.
+- `pubspec.yaml` — added `flutter_launcher_icons` (dev dependency, CI
+  regenerates the icon from the shop's logo before building) and
+  `cached_network_image`.
+
+### Follow-ups before this is production-ready
+- Add `GITHUB_TOKEN` (fine-grained PAT with Actions + Contents write on
+  the repo) and `GITHUB_REPO` to the backend's environment, and confirm
+  the repo allows Actions to create releases (Settings > Actions >
+  General > Workflow permissions).
+- Add a real release-signing key: create `android/key.properties`
+  (already gitignored) — without it, generated APKs are debug-signed,
+  which is fine for testing but not for a real Play Store-adjacent
+  distribution.
+- Consider a size/format check on `logo_url` before it reaches CI (very
+  large images slow the icon-generation step down, though
+  `flutter_launcher_icons` will still handle them correctly).

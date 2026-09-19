@@ -26,6 +26,7 @@ import 'data/repositories/auth_repository.dart';
 import 'data/repositories/call_log_repository.dart';
 import 'data/repositories/cart_repository.dart';
 import 'data/repositories/category_repository.dart';
+import 'data/repositories/deployment_repository.dart';
 import 'data/repositories/icon_repository.dart';
 import 'data/repositories/order_repository.dart';
 import 'data/repositories/product_repository.dart';
@@ -106,6 +107,7 @@ class KiranaMandiApp extends StatelessWidget {
           Provider<CartRepository>(create: (_) => HttpCartRepository(apiClient)),
           Provider<OrderRepository>(create: (_) => HttpOrderRepository(apiClient)),
           Provider<TenantRepository>(create: (_) => HttpTenantRepository(apiClient)),
+          Provider<DeploymentRepository>(create: (_) => HttpDeploymentRepository(apiClient)),
         ] else ...[
           Provider<RegionRepository>(create: (_) => SqliteRegionRepository()),
           Provider<CategoryRepository>(create: (_) => SqliteCategoryRepository()),

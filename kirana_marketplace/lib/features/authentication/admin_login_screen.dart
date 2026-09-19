@@ -4,10 +4,11 @@ import '../../core/constants/env_config.dart';
 import 'auth_controller.dart';
 
 /// Admin login is deliberately NOT phone+OTP: the id and password are
-/// preset by whoever deploys the app via `--dart-define` (see
-/// EnvConfig), so there's a single owner-controlled door into the admin
-/// dashboard that doesn't depend on an SMS gateway or a seeded phone
-/// number.
+/// set by whoever deploys the backend (ADMIN_ID / ADMIN_PASSWORD env
+/// vars there -- see kirana_backend/app/config.py), so there's a single
+/// owner-controlled door into the admin dashboard that doesn't depend on
+/// an SMS gateway or a seeded phone number, and can be rotated without
+/// rebuilding the app.
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
 
@@ -33,39 +34,20 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _formError = null);
 
-    final auth = context.read<AuthController>();
-
-    if (EnvConfig.useRemoteApi) {
-      // The backend is the real authorization boundary once one exists
-      // -- send the entered credentials straight to it rather than
-      // checking them on-device first.
-      final success = await auth.loginAdmin(
-        adminId: _idController.text.trim(),
-        password: _passwordController.text,
-      );
-      if (!mounted) return;
-      if (!success) {
-        setState(() => _formError = auth.error ?? 'Could not log in. Try again.');
-        return;
-      }
-      Navigator.pushNamedAndRemoveUntil(context, '/admin/dashboard', (route) => false);
-      return;
-    }
-
-    if (!EnvConfig.isAdminLoginConfigured) {
+    // Admin credentials live on the backend (ADMIN_ID / ADMIN_PASSWORD
+    // env vars there -- see kirana_backend/app/config.py) so they can be
+    // rotated without rebuilding the app. There's no local fallback: an
+    // offline/SQLite build has no ADMIN_ID/ADMIN_PASSWORD of its own to
+    // check against, so admin login simply isn't available until the
+    // backend is configured (API_BASE_URL).
+    if (!EnvConfig.useRemoteApi) {
       setState(() => _formError =
-          'Admin login isn\'t configured yet. Set ADMIN_ID and ADMIN_PASSWORD '
-          'via --dart-define when building/running the app.');
+          "Admin login isn't available yet -- this build isn't connected "
+          'to a backend (API_BASE_URL is not set).');
       return;
     }
 
-    final idMatches = _idController.text.trim() == EnvConfig.adminId;
-    final passwordMatches = _passwordController.text == EnvConfig.adminPassword;
-    if (!idMatches || !passwordMatches) {
-      setState(() => _formError = 'Incorrect id or password.');
-      return;
-    }
-
+    final auth = context.read<AuthController>();
     final success = await auth.loginAdmin(
       adminId: _idController.text.trim(),
       password: _passwordController.text,
@@ -95,8 +77,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               const Text(
-                'These are configured by whoever deployed this app -- not a '
-                'phone number or OTP.',
+                'These are configured on the server -- not a phone number or OTP.',
                 style: TextStyle(color: Colors.black54),
               ),
               const SizedBox(height: 20),

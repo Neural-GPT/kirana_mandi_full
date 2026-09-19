@@ -39,10 +39,35 @@ dependencies:
   # Safe to remove if you don't want the extra native permission setup.
   geolocator: ^12.0.0
 
+  # Caches decoded shop logo/banner images in memory + on disk instead
+  # of re-downloading and re-decoding them on every rebuild -- see
+  # core/widgets/shop_logo.dart, used anywhere a shop's branding image
+  # is shown (splash, single-shop home, shop profile).
+  cached_network_image: ^3.4.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
 
+  # Regenerates android/app/src/main/res/mipmap-*/ic_launcher.png (and,
+  # if ios/ is present, the iOS AppIcon set) from a single source image
+  # at build time -- this is what changes the launcher icon at the
+  # SYSTEM level for a shop-specific white-label build. Run manually via
+  # `flutter pub run flutter_launcher_icons` after placing a shop's logo
+  # at the path below, or let CI do it (see
+  # .github/workflows/build_apk.yml, which downloads the shop's
+  # logo_url to this exact path before building).
+  flutter_launcher_icons: ^0.14.1
+
 flutter:
   uses-material-design: true
+
+# See the dev_dependency comment above -- CI overwrites
+# assets/icon/icon.png per shop before running this. Locally, drop your
+# own 1024x1024 PNG there and run `flutter pub run flutter_launcher_icons`
+# to preview a shop's icon on a device/emulator.
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 21

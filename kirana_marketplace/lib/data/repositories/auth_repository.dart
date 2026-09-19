@@ -179,11 +179,15 @@ abstract class BaseAuthRepository implements AuthRepository {
 class DevAuthRepository extends BaseAuthRepository {
   @override
   Future<String?> deliverOtp(String phone) async {
-    // Nothing to send -- the fixed dev code is documented on the OTP
-    // screen itself. Kept async with a short delay so the UI's loading
-    // state behaves the same as the real network-backed implementation.
+    // Nothing is actually sent -- but the OTP screen only shows the
+    // "here's your code" box when it's handed a non-null debug code
+    // (see OtpScreen.debugOtp), so the fixed dev code has to be
+    // returned here, not just documented in a comment, or dev-mode
+    // login is untestable without reading the source. Kept async with
+    // a short delay so the UI's loading state behaves the same as the
+    // real network-backed implementation.
     await Future.delayed(const Duration(milliseconds: 400));
-    return null;
+    return AppConstants.devOtpCode;
   }
 
   @override

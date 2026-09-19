@@ -50,8 +50,6 @@ class _CustomerShellScreenState extends State<CustomerShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cartCount = context.watch<CartController>().itemCount;
-
     return Scaffold(
       body: IndexedStack(index: _index, children: _tabs),
       bottomNavigationBar: NavigationBar(
@@ -65,11 +63,21 @@ class _CustomerShellScreenState extends State<CustomerShellScreen> {
           const NavigationDestination(
               icon: Icon(Icons.search), label: 'Search'),
           NavigationDestination(
-            icon: Badge(
-              label: Text('$cartCount'),
-              isLabelVisible: cartCount > 0,
-              backgroundColor: AppColors.accent,
-              child: const Icon(Icons.shopping_cart_outlined),
+            // Selector, not context.watch<CartController>(): only the
+            // badge count actually depends on cart state, so only this
+            // one widget should rebuild when it changes -- watching the
+            // controller at the Scaffold level would rebuild the whole
+            // shell (including re-diffing the IndexedStack/NavigationBar
+            // trees) on every add-to-cart, for a number nothing else on
+            // screen uses.
+            icon: Selector<CartController, int>(
+              selector: (_, cart) => cart.itemCount,
+              builder: (_, cartCount, __) => Badge(
+                label: Text('$cartCount'),
+                isLabelVisible: cartCount > 0,
+                backgroundColor: AppColors.accent,
+                child: const Icon(Icons.shopping_cart_outlined),
+              ),
             ),
             selectedIcon: const Icon(Icons.shopping_cart),
             label: 'Cart',

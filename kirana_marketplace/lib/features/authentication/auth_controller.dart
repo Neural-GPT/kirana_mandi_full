@@ -103,13 +103,13 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  /// Logs in the single configured admin account. Against the local
-  /// SQLite build, AdminLoginScreen has already checked [adminId]/
-  /// [password] against its own EnvConfig before calling this, and this
-  /// just establishes the session. Against the FastAPI backend
-  /// (EnvConfig.useRemoteApi), the credentials are sent to the server
-  /// instead -- the backend is the real authorization boundary there,
-  /// so it does the actual check against its own ADMIN_ID/ADMIN_PASSWORD.
+  /// Logs in the single configured admin account. Credentials are always
+  /// sent to the FastAPI backend (see HttpAuthRepository
+  /// .loginWithAdminCredentials) -- it's the real authorization boundary,
+  /// checking them against its own ADMIN_ID/ADMIN_PASSWORD env vars.
+  /// AdminLoginScreen doesn't even offer this screen a chance to run
+  /// unless EnvConfig.useRemoteApi is true, since an offline/SQLite
+  /// build has no backend to check against.
   Future<bool> loginAdmin({required String adminId, required String password}) async {
     _busy = true;
     _error = null;

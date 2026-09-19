@@ -5,6 +5,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/constants/env_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/shop_theme_controller.dart';
+import '../../core/widgets/shop_logo.dart';
 import '../../data/repositories/shop_repository.dart';
 import '../authentication/auth_controller.dart';
 
@@ -114,7 +115,9 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.storefront, size: 64, color: AppColors.primary),
+            tenant.isLockedToShop
+                ? ShopLogo(logoUrl: tenant.branding?.logoUrl, size: 64)
+                : const Icon(Icons.storefront, size: 64, color: AppColors.primary),
             const SizedBox(height: 16),
             Text(tenant.appName ?? AppConstants.appName,
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),

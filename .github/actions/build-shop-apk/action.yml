@@ -1,0 +1,108 @@
+name: "Build one shop's white-label APK"
+description: >
+  Derives a unique Android application id from shop_id, regenerates the
+  launcher icon from logo_url, builds a release APK with system-level
+  branding, and publishes it to a per-shop GitHub Release.
+
+inputs:
+  shop_id:
+    required: true
+  app_name:
+    required: true
+  primary_color:
+    required: false
+    default: "2E7D32"
+  secondary_color:
+    required: false
+    default: ""
+  logo_url:
+    required: false
+    default: ""
+  github_token:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: subosito/flutter-action@v2
+      with:
+        flutter-version: "3.24.x"
+        channel: stable
+
+    - name: Derive a unique Android application id
+      id: app_id
+      shell: bash
+      run: |
+        # Android application ids must be dot-separated Java identifiers
+        # (letters/digits/underscore, each segment starting with a
+        # letter) -- a raw UUID doesn't qualify, so take its first 8 hex
+        # characters and prefix with a letter. This has to be
+        # DETERMINISTIC (same shop_id -> same id every rebuild): a
+        # shop's app id must stay stable across "Generate My App"
+        # re-runs, or a customer re-downloading an "update" would
+        # actually get flagged by Android as a different, unrelated app
+        # and fail to install over the old one.
+        RAW="${{ inputs.shop_id }}"
+        SHORT=$(echo "$RAW" | tr -d '-' | cut -c1-8 | tr '[:upper:]' '[:lower:]')
+        APP_ID="com.kiranamandi.shop.s${SHORT}"
+        echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
+        echo "Derived application id: $APP_ID"
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: kirana_marketplace
+      run: flutter pub get
+
+    - name: Download shop logo for the launcher icon
+      if: inputs.logo_url != ''
+      shell: bash
+      working-directory: kirana_marketplace
+      run: |
+        mkdir -p assets/icon
+        curl -sSL --fail "${{ inputs.logo_url }}" -o assets/icon/icon.png || {
+          echo "::warning::Could not download logo_url, keeping the default icon.";
+          exit 0;
+        }
+
+    - name: Regenerate the Android launcher icon from the shop's logo
+      if: inputs.logo_url != ''
+      shell: bash
+      working-directory: kirana_marketplace
+      run: dart run flutter_launcher_icons
+
+    - name: Build release APK (split per ABI)
+      shell: bash
+      working-directory: kirana_marketplace
+      run: |
+        flutter build apk \
+          --release \
+          --split-per-abi \
+          -PshopAppId=${{ steps.app_id.outputs.app_id }} \
+          -PshopAppLabel="${{ inputs.app_name }}" \
+          --dart-define=API_BASE_URL=${{ vars.API_BASE_URL }} \
+          --dart-define=SHOP_ID=${{ inputs.shop_id }} \
+          --dart-define=APP_NAME="${{ inputs.app_name }}" \
+          --dart-define=PRIMARY_COLOR=${{ inputs.primary_color }} \
+          --dart-define=SECONDARY_COLOR=${{ inputs.secondary_color }}
+
+    - name: Publish / update this shop's release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        TAG="shop-${{ inputs.shop_id }}"
+        # Overwrite the previous build for this shop rather than
+        # accumulating one release per run, so the shopkeeper's
+        # shared download link never changes.
+        gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+        gh release create "$TAG" \
+          --title "${{ inputs.app_name }}" \
+          --notes "Auto-built white-label APK for shop ${{ inputs.shop_id }}. Application id: ${{ steps.app_id.outputs.app_id }}." \
+          kirana_marketplace/build/app/outputs/flutter-apk/*-release.apk
+
+    - name: Summary
+      shell: bash
+      run: |
+        echo "### ${{ inputs.app_name }}" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Application id: \`${{ steps.app_id.outputs.app_id }}\`" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Download: https://github.com/${{ github.repository }}/releases/tag/shop-${{ inputs.shop_id }}" >> "$GITHUB_STEP_SUMMARY"

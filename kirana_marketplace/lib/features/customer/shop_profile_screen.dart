@@ -172,139 +172,170 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                 label: Text('Cart (${cart.itemCount})'),
               ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      body: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(shop.name,
-                            style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                      ),
-                      if (!shop.isAvailable)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(shop.name,
+                                style: const TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.bold)),
                           ),
-                          child: const Text('Temporarily unavailable',
-                              style: TextStyle(
-                                  color: AppColors.danger, fontSize: 11)),
-                        ),
+                          if (!shop.isAvailable)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.danger.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text('Temporarily unavailable',
+                                  style: TextStyle(
+                                      color: AppColors.danger, fontSize: 11)),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text('${_region?.name ?? ''} · Owner: ${shop.ownerName}',
+                          style: const TextStyle(color: AppColors.textSecondary)),
+                      if (shop.description != null && shop.description!.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(shop.description!),
+                      ],
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _callShop(shop.phone),
+                              icon: const Icon(Icons.call_outlined, size: 18),
+                              label: const Text('Call Shop'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openMaps(shop),
+                              icon: const Icon(Icons.map_outlined, size: 18),
+                              label: const Text('View on Maps'),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text('${_region?.name ?? ''} · Owner: ${shop.ownerName}',
-                      style: const TextStyle(color: AppColors.textSecondary)),
-                  if (shop.description != null && shop.description!.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(shop.description!),
-                  ],
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _callShop(shop.phone),
-                          icon: const Icon(Icons.call_outlined, size: 18),
-                          label: const Text('Call Shop'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _openMaps(shop),
-                          icon: const Icon(Icons.map_outlined, size: 18),
-                          label: const Text('View on Maps'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Delivery',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 10),
-                  Row(
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        shop.homeDeliveryAvailable
-                            ? Icons.check_circle
-                            : Icons.cancel,
-                        size: 18,
-                        color: shop.homeDeliveryAvailable
-                            ? AppColors.success
-                            : AppColors.textSecondary,
+                      const Text('Delivery',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(
+                            shop.homeDeliveryAvailable
+                                ? Icons.check_circle
+                                : Icons.cancel,
+                            size: 18,
+                            color: shop.homeDeliveryAvailable
+                                ? AppColors.success
+                                : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(shop.homeDeliveryAvailable
+                              ? 'Home delivery available'
+                              : 'No home delivery'),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(shop.homeDeliveryAvailable
-                          ? 'Home delivery available'
-                          : 'No home delivery'),
+                      if (shop.homeDeliveryAvailable) ...[
+                        const SizedBox(height: 6),
+                        if (shop.deliveryRadiusKm != null)
+                          Text(
+                              'Delivery radius: ${Formatters.km(shop.deliveryRadiusKm!)}'),
+                        if (shop.deliveryFee != null)
+                          Text(
+                              'Delivery fee: ${Formatters.rupees(shop.deliveryFee!)}'),
+                      ],
+                      if (shopServices.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        const Text('Services',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: shopServices
+                              .map((s) => Chip(label: Text(s.name)))
+                              .toList(),
+                        ),
+                      ],
                     ],
                   ),
-                  if (shop.homeDeliveryAvailable) ...[
-                    const SizedBox(height: 6),
-                    if (shop.deliveryRadiusKm != null)
-                      Text(
-                          'Delivery radius: ${Formatters.km(shop.deliveryRadiusKm!)}'),
-                    if (shop.deliveryFee != null)
-                      Text(
-                          'Delivery fee: ${Formatters.rupees(shop.deliveryFee!)}'),
-                  ],
-                  if (shopServices.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    const Text('Services',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: shopServices
-                          .map((s) => Chip(label: Text(s.name)))
-                          .toList(),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          const Text('Products',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            sliver: const SliverToBoxAdapter(
+              child: Text('Products',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ),
           if (_products.isEmpty)
-            const EmptyState(
-              icon: Icons.inventory_2_outlined,
-              title: 'No products listed yet',
+            const SliverPadding(
+              padding: EdgeInsets.fromLTRB(16, 10, 16, 16),
+              sliver: SliverToBoxAdapter(
+                child: EmptyState(
+                  icon: Icons.inventory_2_outlined,
+                  title: 'No products listed yet',
+                ),
+              ),
             )
           else
-            ..._products.map((p) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: ProductTile(
-                    product: p,
-                    trailing: p.isAvailable
-                        ? _AddToCartControl(shop: shop, product: p)
-                        : null,
-                  ),
-                )),
+            // SliverList.builder: only the product tiles actually
+            // scrolled into view get built, instead of eagerly
+            // constructing a ProductTile (each with its own
+            // add-to-cart control) for every product in the shop up
+            // front -- matters once a shop's catalog grows past a
+            // couple dozen items.
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              sliver: SliverList.builder(
+                itemCount: _products.length,
+                itemBuilder: (context, index) {
+                  final p = _products[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: ProductTile(
+                      product: p,
+                      trailing: p.isAvailable
+                          ? _AddToCartControl(shop: shop, product: p)
+                          : null,
+                    ),
+                  );
+                },
+              ),
+            ),
         ],
       ),
     );

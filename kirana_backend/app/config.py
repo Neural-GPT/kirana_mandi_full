@@ -44,6 +44,20 @@ class Settings(BaseSettings):
     # web/admin dashboard with cookie-based auth later.
     cors_allow_origins: str = "*"
 
+    # --- White-label APK generation (see routers/deploy.py) ---
+    # A fine-grained GitHub personal access token (or a fine-grained
+    # token from a GitHub App) with "Actions: read and write" +
+    # "Contents: read and write" on github_repo -- write is needed for
+    # both triggering the build workflow and publishing/overwriting the
+    # per-shop Release it creates. Leave blank to disable "Generate My
+    # App" (the endpoint returns 503 rather than failing oddly).
+    github_token: str = ""
+    # "owner/repo", e.g. "sharma-kirana/kirana-mandi".
+    github_repo: str = ""
+    github_workflow_file: str = "build_apk.yml"
+    # The branch/ref the workflow file lives on -- almost always "main".
+    github_workflow_ref: str = "main"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_allow_origins.split(",") if o.strip()]
@@ -55,6 +69,10 @@ class Settings(BaseSettings):
     @property
     def textbee_configured(self) -> bool:
         return bool(self.textbee_api_key and self.textbee_device_id)
+
+    @property
+    def github_deploy_configured(self) -> bool:
+        return bool(self.github_token and self.github_repo)
 
 
 @lru_cache

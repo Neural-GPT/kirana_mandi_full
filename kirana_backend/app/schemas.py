@@ -189,6 +189,23 @@ class ShopCodeLookupOut(BaseModel):
     shop_id: str
 
 
+# --- White-label APK generation ---
+class GenerateApkResponse(BaseModel):
+    triggered: bool
+    message: str
+    # Where a human can watch the build progress (GitHub's own Actions
+    # UI) -- the dispatch API itself doesn't hand back a run id to link
+    # to directly.
+    actions_url: str | None = None
+
+
+class ApkStatusOut(BaseModel):
+    status: str  # "not_built_yet" | "ready"
+    download_url: str | None = None
+    built_at: datetime | None = None
+    application_id: str | None = None
+
+
 # --- Products ---
 class ProductCreate(BaseModel):
     name: str

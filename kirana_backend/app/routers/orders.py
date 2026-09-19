@@ -12,7 +12,7 @@ from ..constants import (
     STATUS_PLACED,
 )
 from ..database import get_db
-from ..deps import get_current_user, require_roles
+from ..deps import get_current_user, require_roles, verify_tenant_scope
 
 router = APIRouter(tags=["cart & orders"])
 
@@ -196,6 +196,7 @@ def shop_orders(
     shop_id: str,
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
+    _scope: None = Depends(verify_tenant_scope),
 ):
     shop = db.get(models.Shop, shop_id)
     if shop is None:

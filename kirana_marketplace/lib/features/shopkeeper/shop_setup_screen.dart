@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/utils/run_guarded.dart';
 import '../../core/utils/validators.dart';
 import '../../data/models/category_model.dart';
@@ -33,11 +34,30 @@ class _ShopSetupScreenState extends State<ShopSetupScreen> {
   late final TextEditingController _latController;
   late final TextEditingController _lngController;
   late final TextEditingController _addressController;
+  late final TextEditingController _logoUrlController;
+  late final TextEditingController _bannerUrlController;
 
   String? _categoryId;
   String? _regionId;
+  Color _primaryColor = AppColors.primary;
+  Color? _secondaryColor;
   bool _saving = false;
   bool _locating = false;
+
+  // A small curated palette rather than a full color picker -- keeps
+  // branding simple for a shopkeeper who just wants "my shop looks like
+  // this colour" without a native picker plugin dependency.
+  static const _palette = <Color>[
+    AppColors.primary,
+    Color(0xFF1565C0), // blue
+    Color(0xFF6A1B9A), // purple
+    Color(0xFFAD1457), // pink
+    AppColors.danger,
+    Color(0xFFEF6C00), // orange
+    Color(0xFFF9A825), // amber
+    Color(0xFF00838F), // teal
+    Color(0xFF37474F), // slate
+  ];
 
   List<CategoryModel> _categories = [];
   List<RegionModel> _regions = [];
@@ -62,11 +82,27 @@ class _ShopSetupScreenState extends State<ShopSetupScreen> {
         TextEditingController(text: shop?.longitude?.toString() ?? '');
     _addressController =
         TextEditingController(text: shop?.formattedAddress ?? '');
+    _logoUrlController = TextEditingController(text: shop?.logoUrl ?? '');
+    _bannerUrlController = TextEditingController(text: shop?.bannerUrl ?? '');
     _categoryId = shop?.categoryId;
     _regionId = shop?.regionId;
+    _primaryColor = _parseHex(shop?.primaryColor) ?? AppColors.primary;
+    _secondaryColor = _parseHex(shop?.secondaryColor);
 
     _loadOptions();
   }
+
+  Color? _parseHex(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    var value = hex.trim();
+    if (value.startsWith('#')) value = value.substring(1);
+    if (value.length == 6) value = 'FF$value';
+    final intValue = int.tryParse(value, radix: 16);
+    return intValue == null ? null : Color(intValue);
+  }
+
+  String _toHex(Color color) =>
+      '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
 
   static const _addNewAreaValue = '__add_new_area__';
 
@@ -199,6 +235,10 @@ class _ShopSetupScreenState extends State<ShopSetupScreen> {
           formattedAddress: _addressController.text.trim().isEmpty
               ? null
               : _addressController.text.trim(),
+          logoUrl: _logoUrlController.text.trim(),
+          bannerUrl: _bannerUrlController.text.trim(),
+          primaryColor: _toHex(_primaryColor),
+          secondaryColor: _secondaryColor == null ? '' : _toHex(_secondaryColor!),
         );
         var succeeded = false;
         await runGuarded<void>(
@@ -229,6 +269,14 @@ class _ShopSetupScreenState extends State<ShopSetupScreen> {
               ? null
               : _addressController.text.trim(),
           createdAt: '',
+          logoUrl: _logoUrlController.text.trim().isEmpty
+              ? null
+              : _logoUrlController.text.trim(),
+          bannerUrl: _bannerUrlController.text.trim().isEmpty
+              ? null
+              : _bannerUrlController.text.trim(),
+          primaryColor: _toHex(_primaryColor),
+          secondaryColor: _secondaryColor == null ? null : _toHex(_secondaryColor!),
         );
         final created = await runGuarded(context, () => shopRepo.createShop(shop));
         if (created == null) return; // error already shown by runGuarded
@@ -252,6 +300,8 @@ class _ShopSetupScreenState extends State<ShopSetupScreen> {
     _latController.dispose();
     _lngController.dispose();
     _addressController.dispose();
+    _logoUrlController.dispose();
+    _bannerUrlController.dispose();
     super.dispose();
   }
 
@@ -387,6 +437,77 @@ class _ShopSetupScreenState extends State<ShopSetupScreen> {
                   const InputDecoration(labelText: 'Address (optional)'),
               maxLines: 2,
             ),
+            const SizedBox(height: 20),
+            const _SectionLabel('White-Label Branding'),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Optional -- used to skin your own branded customer app '
+                '(see App Deployment on your dashboard once your shop is set up).',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ),
+            TextFormField(
+              controller: _logoUrlController,
+              decoration: const InputDecoration(
+                labelText: 'Logo image URL (optional)',
+                hintText: 'https://...',
+              ),
+              keyboardType: TextInputType.url,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _bannerUrlController,
+              decoration: const InputDecoration(
+                labelText: 'Banner image URL (optional)',
+                hintText: 'https://...',
+              ),
+              keyboardType: TextInputType.url,
+            ),
+            const SizedBox(height: 14),
+            const Text('Brand color',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: _palette
+                  .map((color) => _ColorSwatch(
+                        color: color,
+                        selected: color.value == _primaryColor.value,
+                        onTap: () => setState(() => _primaryColor = color),
+                      ))
+                  .toList(),
+            ),
+            if (_isEditing && widget.existingShop!.shopCode.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const _SectionLabel('Shop Code'),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.existingShop!.shopCode,
+                        style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                            letterSpacing: 2),
+                      ),
+                    ),
+                    const Text('Share this with customers',
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _saving ? null : _submit,
@@ -416,6 +537,35 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Text(text,
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+    );
+  }
+}
+
+class _ColorSwatch extends StatelessWidget {
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+  const _ColorSwatch({required this.color, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: selected
+              ? Border.all(color: AppColors.textPrimary, width: 2.5)
+              : null,
+        ),
+        child: selected
+            ? const Icon(Icons.check, color: Colors.white, size: 18)
+            : null,
+      ),
     );
   }
 }

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/icon_registry.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/shop_theme_controller.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/repositories/product_repository.dart';
+import '../../data/repositories/shop_repository.dart';
 import '../shared/widgets/empty_state.dart';
 
 class ProductSearchScreen extends StatefulWidget {
@@ -24,8 +26,30 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
       return;
     }
     setState(() => _searching = true);
-    final results =
-        await context.read<ProductRepository>().searchProductsByName(query.trim());
+
+    final tenant = context.read<ShopThemeController>();
+    List<ProductSearchResult> results;
+    if (tenant.isLockedToShop) {
+      // Single-shop (white-label) mode: never let a global cross-shop
+      // search leak other tenants' products into this build -- search
+      // only within the one shop this install is locked to.
+      final shopId = tenant.shopId!;
+      final shop = await context.read<ShopRepository>().getShopById(shopId);
+      final products = await context
+          .read<ProductRepository>()
+          .getProductsByShop(shopId, availableOnly: true);
+      final q = query.trim().toLowerCase();
+      results = shop == null
+          ? []
+          : products
+              .where((p) => p.name.toLowerCase().contains(q))
+              .map((p) => ProductSearchResult(product: p, shop: shop))
+              .toList();
+    } else {
+      results =
+          await context.read<ProductRepository>().searchProductsByName(query.trim());
+    }
+
     if (!mounted) return;
     setState(() {
       _results = results;

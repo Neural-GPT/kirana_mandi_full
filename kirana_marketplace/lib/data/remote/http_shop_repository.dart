@@ -26,6 +26,11 @@ class HttpShopRepository implements ShopRepository {
         deliveryRadiusKm: (json['delivery_radius_km'] as num?)?.toDouble(),
         deliveryFee: (json['delivery_fee'] as num?)?.toDouble(),
         createdAt: json['created_at'] as String,
+        logoUrl: json['logo_url'] as String?,
+        bannerUrl: json['banner_url'] as String?,
+        primaryColor: json['primary_color'] as String?,
+        secondaryColor: json['secondary_color'] as String?,
+        shopCode: json['shop_code'] as String? ?? '',
       );
 
   Map<String, dynamic> _toBody(ShopModel shop) => {
@@ -42,6 +47,10 @@ class HttpShopRepository implements ShopRepository {
         'home_delivery': shop.homeDeliveryAvailable,
         'delivery_radius_km': shop.deliveryRadiusKm,
         'delivery_fee': shop.deliveryFee,
+        'logo_url': shop.logoUrl,
+        'banner_url': shop.bannerUrl,
+        'primary_color': shop.primaryColor,
+        'secondary_color': shop.secondaryColor,
         // service_ids are managed separately via ServiceRepository
         // .setShopServices, which calls PUT /shops/{id}/services -- an
         // empty list here just means "don't touch services" is NOT what

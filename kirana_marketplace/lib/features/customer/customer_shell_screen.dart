@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/shop_theme_controller.dart';
 import '../authentication/auth_controller.dart';
 import 'cart_controller.dart';
 import 'cart_screen.dart';
@@ -9,7 +10,8 @@ import 'orders_screen.dart';
 import 'product_search_screen.dart';
 
 /// Bottom-nav shell for the logged-in customer experience: Home (browse
-/// by area), Search, Cart (grouped by shop), and Orders (current +
+/// by area, or -- in single-shop white-label mode -- straight into that
+/// shop's catalog), Search, Cart (grouped by shop), and Orders (current +
 /// history with delivery status). Replaces the old "customer just lands
 /// on CustomerHomeScreen with no account" flow now that customers log in.
 class CustomerShellScreen extends StatefulWidget {
@@ -27,9 +29,15 @@ class _CustomerShellScreenState extends State<CustomerShellScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final customerId = context.read<AuthController>().currentUser?.id;
+      final cart = context.read<CartController>();
       if (customerId != null) {
-        context.read<CartController>().loadForCustomer(customerId);
+        cart.loadForCustomer(customerId);
       }
+      // In single-shop (white-label) mode, the cart may only ever hold
+      // items from the one shop this install is locked to -- see
+      // CartController.restrictToShop and ShopThemeController.
+      final tenant = context.read<ShopThemeController>();
+      cart.restrictToShop(tenant.shopId);
     });
   }
 

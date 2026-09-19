@@ -9,8 +9,10 @@ import '../../features/admin/admin_dashboard_screen.dart';
 import '../../features/customer/customer_login_screen.dart';
 import '../../features/customer/customer_shell_screen.dart';
 import '../../features/customer/product_search_screen.dart';
+import '../../features/customer/shop_entry_screen.dart';
 import '../../features/customer/shop_list_screen.dart';
 import '../../features/customer/shop_profile_screen.dart';
+import '../../features/shopkeeper/app_deployment_screen.dart';
 import '../../features/shopkeeper/product_form_screen.dart';
 import '../../features/shopkeeper/product_list_screen.dart';
 import '../../features/shopkeeper/shop_setup_screen.dart';
@@ -76,6 +78,11 @@ class AppRouter {
       case '/customer/search':
         return MaterialPageRoute(builder: (_) => const ProductSearchScreen());
 
+      case '/shop-entry':
+        final code = settings.arguments as String?;
+        return MaterialPageRoute(
+            builder: (_) => ShopEntryScreen(initialCode: code));
+
       case '/shopkeeper/dashboard':
         return MaterialPageRoute(
             builder: (_) => const ShopkeeperDashboardScreen());
@@ -97,6 +104,11 @@ class AppRouter {
             existingProduct: args['product'] as ProductModel?,
           ),
         );
+
+      case '/shopkeeper/app-deployment':
+        final shop = settings.arguments as ShopModel;
+        return MaterialPageRoute(
+            builder: (_) => AppDeploymentScreen(shop: shop));
 
       case '/admin/dashboard':
         return MaterialPageRoute(builder: (_) => const AdminDashboardScreen());

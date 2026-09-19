@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/constants/env_config.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/shop_theme_controller.dart';
 import '../../data/repositories/shop_repository.dart';
 import '../authentication/auth_controller.dart';
 
@@ -66,7 +68,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
       final user = auth.currentUser;
       if (user == null) {
-        _goTo('/');
+        // Build Automation white-label install (EnvConfig.shopId baked
+        // in at build time): this is a customer-only, single-shop app --
+        // skip role selection (and the "is this a shopkeeper/admin
+        // device" question) entirely and go straight to customer login.
+        // A Dynamic-mode install with a runtime-chosen shop still goes
+        // through '/', since it's the same generic app everyone else
+        // uses (see role_select_screen.dart's "Have a shop code?" entry).
+        _goTo(EnvConfig.isWhiteLabelBuild ? '/customer/login' : '/');
         return;
       }
 
@@ -91,13 +100,15 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     } catch (_) {
       // Whatever went wrong, don't leave the user staring at a spinner --
-      // fall back to the role-select screen, the same as a fresh install.
-      _goTo('/');
+      // fall back to the role-select screen (or straight to customer
+      // login for a white-label build), the same as a fresh install.
+      _goTo(EnvConfig.isWhiteLabelBuild ? '/customer/login' : '/');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final tenant = context.watch<ShopThemeController>();
     return Scaffold(
       body: Center(
         child: Column(
@@ -105,8 +116,8 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             const Icon(Icons.storefront, size: 64, color: AppColors.primary),
             const SizedBox(height: 16),
-            const Text(AppConstants.appName,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(tenant.appName ?? AppConstants.appName,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             const CircularProgressIndicator(),
             if (_showManualContinue) ...[
@@ -117,7 +128,8 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
               const SizedBox(height: 10),
               OutlinedButton(
-                onPressed: () => _goTo('/'),
+                onPressed: () =>
+                    _goTo(EnvConfig.isWhiteLabelBuild ? '/customer/login' : '/'),
                 child: const Text('Continue'),
               ),
             ],

@@ -86,6 +86,26 @@ class SqliteShopRepository implements ShopRepository {
     return ShopModel.fromMap(rows.first);
   }
 
+  Future<String> _uniqueShopCode(Database db) async {
+    // Mirrors the backend's collision-checked generation (see
+    // kirana_backend/app/routers/shops.py _unique_shop_code) so both
+    // repository backends produce the same shape of code for the
+    // "Dynamic / On-the-Fly" white-label flow (see ShopEntryScreen).
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no O/0/I/1 -- easy to misread
+    final rand = DateTime.now().microsecondsSinceEpoch;
+    for (var attempt = 0; attempt < 10; attempt++) {
+      final seed = rand + attempt;
+      final code = List.generate(
+          8, (i) => chars[(seed ~/ (i + 1)) % chars.length]).join();
+      final existing =
+          await db.query('shops', where: 'shop_code = ?', whereArgs: [code], limit: 1);
+      if (existing.isEmpty) return code;
+    }
+    // Astronomically unlikely to ever hit this, but fall back to a
+    // timestamp-derived code rather than fail shop creation outright.
+    return 'S${DateTime.now().millisecondsSinceEpoch}'.substring(0, 9);
+  }
+
   @override
   Future<ShopModel> createShop(ShopModel shop) async {
     final db = await _db;
@@ -108,6 +128,11 @@ class SqliteShopRepository implements ShopRepository {
       deliveryRadiusKm: shop.deliveryRadiusKm,
       deliveryFee: shop.deliveryFee,
       createdAt: DateTime.now().toIso8601String(),
+      logoUrl: shop.logoUrl,
+      bannerUrl: shop.bannerUrl,
+      primaryColor: shop.primaryColor,
+      secondaryColor: shop.secondaryColor,
+      shopCode: await _uniqueShopCode(db),
     );
     await db.insert('shops', withId.toMap());
     await _syncQueue.enqueue(

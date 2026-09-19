@@ -40,7 +40,7 @@ class DatabaseHelper {
 
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -52,6 +52,41 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       await _createV3Tables(db);
+    }
+    if (oldVersion < 4) {
+      await _createV4Columns(db);
+    }
+  }
+
+  /// White-label branding columns on an existing `shops` table (added
+  /// after the initial multi-tenant refactor) -- see ARCHITECTURAL GOALS
+  /// > Phase 1 and ShopThemeController. SQLite's `ALTER TABLE ... ADD
+  /// COLUMN` can't express `UNIQUE`, so shop_code uniqueness for
+  /// upgraded (pre-existing) installs is enforced in application code
+  /// (see ShopRepository._uniqueShopCode) rather than at the schema
+  /// level -- fine for a single-device offline database.
+  Future<void> _createV4Columns(Database db) async {
+    await db.execute('ALTER TABLE shops ADD COLUMN logo_url TEXT');
+    await db.execute('ALTER TABLE shops ADD COLUMN banner_url TEXT');
+    await db.execute('ALTER TABLE shops ADD COLUMN primary_color TEXT');
+    await db.execute('ALTER TABLE shops ADD COLUMN secondary_color TEXT');
+    await db.execute('ALTER TABLE shops ADD COLUMN shop_code TEXT');
+
+    // Backfill shop_code for shops that existed before this column did --
+    // ShopModel.fromMap tolerates a null/missing code (falls back to
+    // ''), but an empty code can't be shared via the Dynamic/On-the-Fly
+    // flow, so give every existing shop a real one right away.
+    final rows = await db.query('shops', columns: ['id']);
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final used = <String>{};
+    for (final row in rows) {
+      String code;
+      do {
+        final seed = DateTime.now().microsecondsSinceEpoch + used.length;
+        code = List.generate(8, (i) => chars[(seed ~/ (i + 1)) % chars.length]).join();
+      } while (!used.add(code));
+      await db.update('shops', {'shop_code': code},
+          where: 'id = ?', whereArgs: [row['id']]);
     }
   }
 
@@ -255,6 +290,11 @@ class DatabaseHelper {
         delivery_radius_km REAL,
         delivery_fee REAL,
         created_at TEXT NOT NULL,
+        logo_url TEXT,
+        banner_url TEXT,
+        primary_color TEXT,
+        secondary_color TEXT,
+        shop_code TEXT UNIQUE,
         FOREIGN KEY (owner_user_id) REFERENCES users (id),
         FOREIGN KEY (region_id) REFERENCES regions (id)
       );

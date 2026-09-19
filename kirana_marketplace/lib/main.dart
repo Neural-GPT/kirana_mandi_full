@@ -6,7 +6,7 @@ import 'core/constants/env_config.dart';
 import 'core/network/connectivity_service.dart';
 import 'core/routing/app_router.dart';
 import 'core/storage/session_storage.dart';
-import 'core/theme/app_theme.dart';
+import 'core/theme/shop_theme_controller.dart';
 import 'core/theme/theme_controller.dart';
 import 'data/remote/api_client.dart';
 import 'data/remote/http_admin_repository.dart';
@@ -34,6 +34,7 @@ import 'data/repositories/sales_repository.dart';
 import 'data/repositories/service_repository.dart';
 import 'data/repositories/shop_repository.dart';
 import 'data/repositories/sync_queue_repository.dart';
+import 'data/repositories/tenant_repository.dart';
 import 'features/authentication/auth_controller.dart';
 import 'features/customer/cart_controller.dart';
 
@@ -104,6 +105,7 @@ class KiranaMandiApp extends StatelessWidget {
           Provider<ProductRepository>(create: (_) => HttpProductRepository(apiClient)),
           Provider<CartRepository>(create: (_) => HttpCartRepository(apiClient)),
           Provider<OrderRepository>(create: (_) => HttpOrderRepository(apiClient)),
+          Provider<TenantRepository>(create: (_) => HttpTenantRepository(apiClient)),
         ] else ...[
           Provider<RegionRepository>(create: (_) => SqliteRegionRepository()),
           Provider<CategoryRepository>(create: (_) => SqliteCategoryRepository()),
@@ -133,7 +135,21 @@ class KiranaMandiApp extends StatelessWidget {
           ),
           Provider<CartRepository>(create: (_) => SqliteCartRepository()),
           Provider<OrderRepository>(create: (_) => SqliteOrderRepository()),
+          ProxyProvider<ShopRepository, TenantRepository>(
+            update: (_, shopRepository, __) => SqliteTenantRepository(shopRepository),
+          ),
         ],
+
+        // White-label tenant context: resolves which single shop (if
+        // any) this install is locked to (build-time via
+        // EnvConfig.shopId, or at runtime via a Shop Code -- see
+        // ShopEntryScreen) and exposes that shop's branding/theme.
+        ChangeNotifierProxyProvider<TenantRepository, ShopThemeController>(
+          create: (context) =>
+              ShopThemeController(context.read<TenantRepository>(), apiClient),
+          update: (context, tenantRepository, previous) =>
+              previous ?? ShopThemeController(tenantRepository, apiClient),
+        ),
 
         // --- App/session state ---
         ChangeNotifierProxyProvider<AuthRepository, AuthController>(
@@ -174,11 +190,12 @@ class _AppWithTheme extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeController = context.watch<ThemeController>();
+    final tenant = context.watch<ShopThemeController>();
     return MaterialApp(
-      title: AppConstants.appName,
+      title: tenant.appName ?? AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: tenant.light(),
+      darkTheme: tenant.dark(),
       themeMode: themeController.themeMode,
       onGenerateRoute: AppRouter.onGenerateRoute,
       initialRoute: '/splash',

@@ -41,7 +41,14 @@ class RoleSelectScreen extends StatelessWidget {
                 subtitle: 'Browse shops & products nearby',
                 onTap: () => Navigator.pushNamed(context, '/customer/login'),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
+              Center(
+                child: TextButton(
+                  onPressed: () => Navigator.pushNamed(context, '/shop-entry'),
+                  child: const Text('Have a shop code or shop link?'),
+                ),
+              ),
+              const SizedBox(height: 4),
               _RoleButton(
                 icon: Icons.store_outlined,
                 label: 'I am a Shopkeeper',

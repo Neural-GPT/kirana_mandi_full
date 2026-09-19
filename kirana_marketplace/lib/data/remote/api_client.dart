@@ -24,6 +24,14 @@ class ApiClient {
   final SessionStorage _sessionStorage;
   String? _token;
 
+  // Set once ShopThemeController locks this install to one shop (build-time
+  // via EnvConfig.shopId, or at runtime via the Dynamic/Shop-Code flow --
+  // see ShopEntryScreen). Sent as `X-Shop-ID` on every request so the
+  // backend's tenant-isolation guard (verify_tenant_scope) can reject any
+  // request that somehow targets a different shop_id. Optional: a
+  // multi-shop build never sets this and nothing changes for it.
+  String? _shopId;
+
   static const _timeout = Duration(seconds: 15);
 
   ApiClient({
@@ -34,6 +42,12 @@ class ApiClient {
         _sessionStorage = sessionStorage ?? SessionStorage();
 
   String? get authToken => _token;
+
+  /// Locks every subsequent request to carry `X-Shop-ID: $shopId`. Pass
+  /// null to clear the lock (e.g. switching shops in Dynamic mode).
+  void setTenantShopId(String? shopId) {
+    _shopId = (shopId == null || shopId.isEmpty) ? null : shopId;
+  }
 
   /// Loads a previously-persisted token into memory. Call once at app
   /// startup (before runApp) so a restored session's very first request
@@ -58,6 +72,7 @@ class ApiClient {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         if (_token != null) 'Authorization': 'Bearer $_token',
+        if (_shopId != null) 'X-Shop-ID': _shopId!,
       };
 
   Uri _uri(String path, Map<String, dynamic>? query) {

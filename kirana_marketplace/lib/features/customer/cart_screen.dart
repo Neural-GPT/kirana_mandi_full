@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/shop_theme_controller.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/run_guarded.dart';
 import '../../data/models/cart_item_model.dart';
@@ -13,6 +14,8 @@ import 'cart_controller.dart';
 /// Cart grouped by shop -- a customer can add items from several
 /// different shops, and each shop group checks out (and is called
 /// about) independently, since only that shop's items travel together.
+/// In single-shop (white-label) mode there's only ever one group -- see
+/// CartController.restrictToShop.
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
@@ -64,7 +67,7 @@ class _CartScreenState extends State<CartScreen> {
     if (proceed != true || !mounted) return;
 
     final auth = context.read<AuthController>().currentUser!;
-    await runGuarded(
+    final placed = await runGuarded(
       context,
       () => context.read<CartController>().checkout(
             customerId: auth.id,
@@ -75,6 +78,18 @@ class _CartScreenState extends State<CartScreen> {
           ),
       successMessage: 'Order placed! ${shop.name} will confirm it shortly.',
     );
+    if (placed == null || !mounted) return;
+
+    // Single-shop (white-label) mode: order details (items, quantities,
+    // customer contact) travel with the order itself, and the
+    // shopkeeper's number is dialed straight away on confirmation so the
+    // customer doesn't have to look it up separately -- see
+    // ARCHITECTURAL GOALS > Phase 3 "Direct Cart & Single-Shop Checkout".
+    final tenant = context.read<ShopThemeController>();
+    if (tenant.isLockedToShop) {
+      final uri = Uri(scheme: 'tel', path: shop.phone);
+      if (await canLaunchUrl(uri)) await launchUrl(uri);
+    }
   }
 
   @override

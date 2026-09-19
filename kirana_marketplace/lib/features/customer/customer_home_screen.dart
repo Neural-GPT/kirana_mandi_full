@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/shop_theme_controller.dart';
 import '../../data/models/region_model.dart';
 import '../../data/repositories/region_repository.dart';
 import '../authentication/auth_controller.dart';
 import '../shared/settings_screen.dart';
 import '../shared/widgets/empty_state.dart';
+import 'shop_profile_screen.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -26,6 +28,30 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tenant = context.watch<ShopThemeController>();
+
+    // Single-shop / white-label mode: skip area discovery entirely and
+    // show this one shop's catalog directly -- ShopProfileScreen already
+    // renders everything a customer needs (branding-adjacent info,
+    // delivery, services, products, add-to-cart), so it's reused as-is
+    // rather than duplicated here. See ARCHITECTURAL GOALS > Phase 3.
+    if (tenant.isLockedToShop) {
+      if (tenant.loading && tenant.branding == null) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      if (tenant.branding == null) {
+        return Scaffold(
+          appBar: AppBar(title: Text(tenant.appName ?? AppConstants.appName)),
+          body: EmptyState(
+            icon: Icons.error_outline,
+            title: 'Could not load this shop',
+            subtitle: tenant.error ?? 'Please check your connection and try again.',
+          ),
+        );
+      }
+      return ShopProfileScreen(shopId: tenant.shopId!);
+    }
+
     final user = context.watch<AuthController>().currentUser;
     return Scaffold(
       appBar: AppBar(

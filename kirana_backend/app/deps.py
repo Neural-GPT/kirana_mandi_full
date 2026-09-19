@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -45,3 +45,30 @@ def require_shop_owner(shop_owner_user_id: str, user: User) -> None:
         return
     if user.id != shop_owner_user_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "You don't own this shop")
+
+
+def verify_tenant_scope(
+    shop_id: str,
+    x_shop_id: str | None = Header(default=None, alias="X-Shop-ID"),
+) -> None:
+    """
+    Multi-tenant isolation guard for customer-facing, shop-scoped routes
+    (e.g. `GET /shops/{shop_id}/products`).
+
+    A white-labeled/dynamic-mode client app is *locked* to one shop_id
+    (see the Flutter ShopThemeController) and sends it on every request
+    as `X-Shop-ID` so a bug elsewhere in the client can never leak
+    another tenant's data into that build -- if the header is present it
+    MUST match the shop_id in the URL, or the request is rejected before
+    it touches the database.
+
+    The header is optional (older/non-white-label clients, and every
+    other role, simply don't send it) so this is additive, not a breaking
+    change to the API: every route's normal `shop_id` path/ownership
+    checks still apply on top of this.
+    """
+    if x_shop_id is not None and x_shop_id != shop_id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "This app is locked to a different shop.",
+        )

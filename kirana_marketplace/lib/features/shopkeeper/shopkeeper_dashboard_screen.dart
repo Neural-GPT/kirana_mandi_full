@@ -11,6 +11,7 @@ import '../authentication/auth_controller.dart';
 import '../shared/settings_screen.dart';
 import '../shared/widgets/offline_banner.dart';
 import 'analytics_screen.dart';
+import 'app_deployment_screen.dart';
 import 'calls_screen.dart';
 import 'daily_sales_screen.dart';
 import 'services_delivery_screen.dart';
@@ -307,6 +308,26 @@ class _ShopkeeperDashboardScreenState
                     context,
                     MaterialPageRoute(
                         builder: (_) => CallsScreen(shopId: shop.id)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 4, left: 4),
+                  child: Text('White-Label App',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: AppColors.textSecondary)),
+                ),
+                const SizedBox(height: 8),
+                _DashboardTile(
+                  icon: Icons.phone_android_outlined,
+                  title: 'App Deployment',
+                  subtitle: 'Share your Shop Code, or export a build config for a branded APK',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => AppDeploymentScreen(shop: shop)),
                   ),
                 ),
                 ],

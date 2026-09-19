@@ -55,4 +55,42 @@ class EnvConfig {
   static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
   static bool get useRemoteApi => apiBaseUrl.isNotEmpty;
+
+  // --- White-label build configuration ---
+  //
+  // These three flags are how a single core Flutter codebase becomes a
+  // shop-specific APK/web build for the "Build Automation Config"
+  // distribution path (see ShopkeeperPortal > App Deployment):
+  //
+  //   flutter build apk \
+  //     --dart-define=API_BASE_URL=https://kirana-mandi-api.onrender.com \
+  //     --dart-define=SHOP_ID=b6b8b3f0-... \
+  //     --dart-define=APP_NAME="Sharma General Store" \
+  //     --dart-define=PRIMARY_COLOR=2E7D32
+  //
+  /// The tenant this build is permanently locked to. When non-empty, the
+  /// customer experience skips multi-shop/region discovery entirely and
+  /// shows only this one shop's catalog and branding (see
+  /// ShopThemeController and CustomerHomeScreen) -- this is the
+  /// "Build Automation" white-label path. Leave blank for the normal
+  /// multi-shop marketplace build, or for the "Dynamic / On-the-Fly"
+  /// build where the shop is chosen at runtime via a Shop Code instead
+  /// (see ShopEntryScreen).
+  static const String shopId = String.fromEnvironment('SHOP_ID');
+
+  static bool get isWhiteLabelBuild => shopId.isNotEmpty;
+
+  /// Overrides [AppConstants.appName] for a shop-specific build. Falls
+  /// back to the platform-level app name when not set (e.g. multi-shop
+  /// builds, or a white-label build that just didn't bother customizing
+  /// this).
+  static const String appNameOverride = String.fromEnvironment('APP_NAME');
+
+  /// Hex color (with or without a leading '#', e.g. "2E7D32" or
+  /// "#2E7D32") used as the seed for this build's theme. Falls back to
+  /// the shop's own `primary_color` (fetched from `/shops/{id}/branding`
+  /// at runtime) when unset, and to the default app palette if neither
+  /// is present -- see ShopThemeController.
+  static const String primaryColorOverride = String.fromEnvironment('PRIMARY_COLOR');
+  static const String secondaryColorOverride = String.fromEnvironment('SECONDARY_COLOR');
 }

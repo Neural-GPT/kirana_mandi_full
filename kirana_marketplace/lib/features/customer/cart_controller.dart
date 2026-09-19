@@ -20,11 +20,27 @@ class CartController extends ChangeNotifier {
   bool _loading = false;
   String? _error;
 
+  // When set (white-label / single-shop mode -- see ShopThemeController
+  // and CustomerShellScreen), the cart refuses to add or check out items
+  // belonging to any other shop_id, even if a stale product reference
+  // from before the lock somehow made it back into a widget's state.
+  // This mirrors the equivalent guard on the backend
+  // (deps.verify_tenant_scope) at the client layer.
+  String? _restrictedToShopId;
+
   bool get loading => _loading;
   String? get error => _error;
   List<CartItemModel> get items => _items;
   int get itemCount => _items.fold(0, (sum, i) => sum + i.quantity);
   double get total => _items.fold(0.0, (sum, i) => sum + i.lineTotal);
+  String? get restrictedToShopId => _restrictedToShopId;
+
+  /// Locks this cart to a single shop -- call once when the app is
+  /// running in single-shop (white-label) mode. Pass null to lift the
+  /// restriction (multi-shop marketplace mode, the default).
+  void restrictToShop(String? shopId) {
+    _restrictedToShopId = (shopId == null || shopId.isEmpty) ? null : shopId;
+  }
 
   List<CartShopGroup> get groupedByShop {
     final byShop = <String, List<CartItemModel>>{};
@@ -89,6 +105,11 @@ class CartController extends ChangeNotifier {
   }) async {
     final customerId = _customerId;
     if (customerId == null) return;
+    if (_restrictedToShopId != null && _restrictedToShopId != shopId) {
+      _error = "This app is locked to a single shop's catalog.";
+      notifyListeners();
+      return;
+    }
     try {
       await _cartRepository.addOrIncrement(
         customerId: customerId,
@@ -130,11 +151,14 @@ class CartController extends ChangeNotifier {
     required List<CartShopGroup> groups,
     required Map<String, String> shopPhoneById,
   }) async {
+    final allowedGroups = _restrictedToShopId == null
+        ? groups
+        : groups.where((g) => g.shopId == _restrictedToShopId).toList();
     final orders = await _orderRepository.placeOrdersFromGroups(
       customerId: customerId,
       customerName: customerName,
       customerPhone: customerPhone,
-      groups: groups,
+      groups: allowedGroups,
       shopPhoneById: shopPhoneById,
     );
     await refresh();

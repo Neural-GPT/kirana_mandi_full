@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .database import Base, engine
+from .database import Base, engine, run_startup_migrations
 from .routers import admin, auth, catalog, orders, shops, sync
 
 logging.basicConfig(level=logging.INFO)
@@ -20,6 +20,9 @@ async def lifespan(_app: FastAPI):
     # a schema that changes over time, switch to Alembic migrations
     # instead (see README "Database migrations").
     Base.metadata.create_all(bind=engine)
+    # Additive column migrations for databases that already existed
+    # before those columns were added to the model (see database.py).
+    run_startup_migrations()
     yield
 
 

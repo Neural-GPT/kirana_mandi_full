@@ -1,0 +1,143 @@
+name: Build white-label shop APKs
+
+# "Build Automation Config" distribution path (see ARCHITECTURAL GOALS >
+# Phase 2.2b, and Shopkeeper Dashboard > App Deployment, which generates
+# the exact --dart-define flags this workflow consumes).
+#
+# Two ways to trigger a build:
+#
+#   1. Automatically, for every shop listed in `shops.json` at the repo
+#      root, whenever that file changes on `main` (e.g. a shopkeeper's
+#      build_config.json, exported from the app, gets committed there).
+#   2. Manually for a single shop, via workflow_dispatch -- paste in the
+#      three --dart-define values shown on a shopkeeper's App Deployment
+#      screen and run it from the Actions tab. Handy for a one-off
+#      rebuild without touching shops.json.
+#
+# `shops.json` shape (one entry per shop-specific APK to produce):
+#   [
+#     {
+#       "shop_id": "b6b8b3f0-1234-4a5b-9c0d-abcdef123456",
+#       "app_name": "Sharma General Store",
+#       "primary_color": "2E7D32"
+#     },
+#     { "shop_id": "...", "app_name": "...", "primary_color": "..." }
+#   ]
+#
+# API_BASE_URL is shared across every shop (they're all tenants of the
+# same backend) and comes from the API_BASE_URL repository variable
+# (Settings > Secrets and variables > Actions > Variables) rather than
+# being repeated per shop.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "shops.json"
+      - ".github/workflows/build_apk.yml"
+  workflow_dispatch:
+    inputs:
+      shop_id:
+        description: "SHOP_ID (from the shop's App Deployment screen)"
+        required: true
+      app_name:
+        description: 'APP_NAME, e.g. "Sharma General Store"'
+        required: true
+      primary_color:
+        description: "PRIMARY_COLOR as a 6-digit hex, no '#', e.g. 2E7D32"
+        required: false
+        default: "2E7D32"
+
+env:
+  FLUTTER_VERSION: "3.24.x"
+  APP_DIR: kirana_marketplace
+
+jobs:
+  # Reads shops.json into a build matrix -- skipped entirely on a manual
+  # single-shop dispatch, where the build-single-shop job below runs
+  # instead.
+  load-matrix:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      shops: ${{ steps.read.outputs.shops }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: |
+          if [ ! -f shops.json ]; then
+            echo "shops=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "shops=$(jq -c . shops.json)" >> "$GITHUB_OUTPUT"
+
+  build-matrix:
+    needs: load-matrix
+    if: needs.load-matrix.outputs.shops != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shop: ${{ fromJson(needs.load-matrix.outputs.shops) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Install dependencies
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter pub get
+
+      - name: Build APK for ${{ matrix.shop.app_name }}
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          flutter build apk \
+            --release \
+            --dart-define=API_BASE_URL=${{ vars.API_BASE_URL }} \
+            --dart-define=SHOP_ID=${{ matrix.shop.shop_id }} \
+            --dart-define=APP_NAME="${{ matrix.shop.app_name }}" \
+            --dart-define=PRIMARY_COLOR=${{ matrix.shop.primary_color }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          # Slugified app name so multiple shops' APKs don't collide as
+          # artifact names in the same workflow run.
+          name: apk-${{ matrix.shop.shop_id }}
+          path: ${{ env.APP_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  build-single-shop:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+
+      - name: Install dependencies
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter pub get
+
+      - name: Build APK for ${{ inputs.app_name }}
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          flutter build apk \
+            --release \
+            --dart-define=API_BASE_URL=${{ vars.API_BASE_URL }} \
+            --dart-define=SHOP_ID=${{ inputs.shop_id }} \
+            --dart-define=APP_NAME="${{ inputs.app_name }}" \
+            --dart-define=PRIMARY_COLOR=${{ inputs.primary_color }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ inputs.shop_id }}
+          path: ${{ env.APP_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

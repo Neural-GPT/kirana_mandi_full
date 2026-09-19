@@ -4,90 +4,118 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get light {
-    final base = ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
+  static ThemeData get light => _build(
         primary: AppColors.primary,
         secondary: AppColors.accent,
-      ),
-      scaffoldBackgroundColor: AppColors.background,
-      fontFamily: 'Roboto',
-    );
+        dark: false,
+      );
 
-    return base.copyWith(
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+  static ThemeData get dark => _build(
+        primary: const Color(0xFF66BB6A),
+        secondary: AppColors.accent,
+        dark: true,
+      );
+
+  /// Builds a theme seeded from a shop's own branding colors instead of
+  /// the app's default palette -- see ShopThemeController, which is the
+  /// only caller of this. [secondary] falls back to [primary] (rather
+  /// than the app's default accent) when a shop only set one color, so a
+  /// white-labeled build never shows an unrelated brand's accent color.
+  static ThemeData branded({
+    required Color primary,
+    Color? secondary,
+    required bool dark,
+  }) =>
+      _build(primary: primary, secondary: secondary ?? primary, dark: dark);
+
+  static ThemeData _build({
+    required Color primary,
+    required Color secondary,
+    required bool dark,
+  }) {
+    if (!dark) {
+      final base = ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primary,
+          primary: primary,
+          secondary: secondary,
+        ),
+        scaffoldBackgroundColor: AppColors.background,
+        fontFamily: 'Roboto',
+      );
+
+      return base.copyWith(
+        appBarTheme: AppBarTheme(
+          backgroundColor: primary,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          elevation: 0,
+          centerTitle: false,
         ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary),
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            textStyle: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.divider),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: primary,
+            side: BorderSide(color: primary),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.divider),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppColors.divider),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppColors.divider),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: primary, width: 1.5),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        cardTheme: CardThemeData(
+          elevation: 1,
+          color: AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          margin: EdgeInsets.zero,
         ),
-      ),
-      cardTheme: CardThemeData(
-        elevation: 1,
-        color: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+        chipTheme: base.chipTheme.copyWith(
+          backgroundColor: AppColors.background,
+          selectedColor: primary.withOpacity(0.15),
+          labelStyle: const TextStyle(color: AppColors.textPrimary),
+          shape: StadiumBorder(side: const BorderSide(color: AppColors.divider)),
         ),
-        margin: EdgeInsets.zero,
-      ),
-      chipTheme: base.chipTheme.copyWith(
-        backgroundColor: AppColors.background,
-        selectedColor: AppColors.primary.withOpacity(0.15),
-        labelStyle: const TextStyle(color: AppColors.textPrimary),
-        shape: StadiumBorder(side: BorderSide(color: AppColors.divider)),
-      ),
-    );
-  }
+      );
+    }
 
-  static ThemeData get dark {
     final base = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.primary,
+        seedColor: primary,
         brightness: Brightness.dark,
-        primary: const Color(0xFF66BB6A),
-        secondary: AppColors.accent,
+        primary: primary,
+        secondary: secondary,
       ),
       scaffoldBackgroundColor: const Color(0xFF121212),
       fontFamily: 'Roboto',
@@ -102,7 +130,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF66BB6A),
+          backgroundColor: primary,
           foregroundColor: Colors.black,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           shape: RoundedRectangleBorder(
@@ -113,8 +141,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFF66BB6A),
-          side: const BorderSide(color: Color(0xFF66BB6A)),
+          foregroundColor: primary,
+          side: BorderSide(color: primary),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -136,7 +164,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF66BB6A), width: 1.5),
+          borderSide: BorderSide(color: primary, width: 1.5),
         ),
       ),
       cardTheme: CardThemeData(

@@ -90,6 +90,16 @@ class ProductIcon(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
+def _shop_code() -> str:
+    # Short, human-typeable code a customer can enter in the "Dynamic /
+    # On-the-Fly" white-label flow (see routers/shops.py get_shop_by_code)
+    # instead of installing a shop-specific APK. Deliberately NOT the
+    # shop's uuid (too long to type/read aloud) -- 8 chars of the uuid's
+    # hex, uppercased, is unique enough in practice and re-checked for
+    # collisions at creation time regardless (see shops.py).
+    return uuid.uuid4().hex[:8].upper()
+
+
 class Shop(Base):
     __tablename__ = "shops"
 
@@ -111,6 +121,25 @@ class Shop(Base):
     delivery_radius_km: Mapped[float | None] = mapped_column(Float, nullable=True)
     delivery_fee: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    # --- White-label branding (Multi-Tenant / White-Labeled ecosystem) ---
+    # Everything a client app needs to skin itself for this one shop --
+    # see GET /shops/{shop_id}/branding and the Flutter ShopThemeController
+    # that consumes it. No file uploads (matches the rest of this app's
+    # "no photo uploads" pattern -- icons are picked from a bundled
+    # registry) -- logo/banner are just URLs the shopkeeper pastes in
+    # (e.g. an image already hosted somewhere), and colors are hex strings
+    # the client parses into a Color.
+    logo_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    banner_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    primary_color: Mapped[str | None] = mapped_column(String, nullable=True)  # "#RRGGBB"
+    secondary_color: Mapped[str | None] = mapped_column(String, nullable=True)  # "#RRGGBB"
+
+    # Short code a customer types into the "Dynamic / On-the-Fly" build of
+    # the customer app (or that's embedded in a shareable deep link) to
+    # lock that install to this one shop's catalog + theme, without
+    # needing a shop-specific APK build. Unique across all shops.
+    shop_code: Mapped[str] = mapped_column(String, unique=True, index=True, default=_shop_code)
 
     products: Mapped[list["Product"]] = relationship(back_populates="shop", cascade="all, delete-orphan")
 

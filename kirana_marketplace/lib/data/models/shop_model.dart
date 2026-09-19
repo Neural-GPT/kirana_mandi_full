@@ -26,6 +26,19 @@ class ShopModel {
 
   final String createdAt;
 
+  // --- White-label branding ---
+  // See core/theme/shop_theme_controller.dart, which turns these into a
+  // live ThemeData for a build/runtime that's locked to this shop.
+  final String? logoUrl;
+  final String? bannerUrl;
+  final String? primaryColor; // "#RRGGBB" or "RRGGBB"
+  final String? secondaryColor;
+
+  // Short human-typeable code for the "Dynamic / On-the-Fly" white-label
+  // flow (see ShopEntryScreen) -- a customer types this (or opens a link
+  // that embeds it) instead of installing a shop-specific APK.
+  final String shopCode;
+
   ShopModel({
     required this.id,
     required this.ownerUserId,
@@ -45,6 +58,11 @@ class ShopModel {
     this.deliveryRadiusKm,
     this.deliveryFee,
     required this.createdAt,
+    this.logoUrl,
+    this.bannerUrl,
+    this.primaryColor,
+    this.secondaryColor,
+    this.shopCode = '',
   });
 
   bool get hasLocation => latitude != null && longitude != null;
@@ -65,6 +83,10 @@ class ShopModel {
     bool? homeDeliveryAvailable,
     double? deliveryRadiusKm,
     double? deliveryFee,
+    String? logoUrl,
+    String? bannerUrl,
+    String? primaryColor,
+    String? secondaryColor,
   }) =>
       ShopModel(
         id: id,
@@ -86,6 +108,11 @@ class ShopModel {
         deliveryRadiusKm: deliveryRadiusKm ?? this.deliveryRadiusKm,
         deliveryFee: deliveryFee ?? this.deliveryFee,
         createdAt: createdAt,
+        logoUrl: logoUrl ?? this.logoUrl,
+        bannerUrl: bannerUrl ?? this.bannerUrl,
+        primaryColor: primaryColor ?? this.primaryColor,
+        secondaryColor: secondaryColor ?? this.secondaryColor,
+        shopCode: shopCode,
       );
 
   Map<String, Object?> toMap() => {
@@ -107,6 +134,11 @@ class ShopModel {
         'delivery_radius_km': deliveryRadiusKm,
         'delivery_fee': deliveryFee,
         'created_at': createdAt,
+        'logo_url': logoUrl,
+        'banner_url': bannerUrl,
+        'primary_color': primaryColor,
+        'secondary_color': secondaryColor,
+        'shop_code': shopCode,
       };
 
   factory ShopModel.fromMap(Map<String, Object?> map) => ShopModel(
@@ -128,5 +160,10 @@ class ShopModel {
         deliveryRadiusKm: (map['delivery_radius_km'] as num?)?.toDouble(),
         deliveryFee: (map['delivery_fee'] as num?)?.toDouble(),
         createdAt: map['created_at'] as String,
+        logoUrl: map['logo_url'] as String?,
+        bannerUrl: map['banner_url'] as String?,
+        primaryColor: map['primary_color'] as String?,
+        secondaryColor: map['secondary_color'] as String?,
+        shopCode: map['shop_code'] as String? ?? '',
       );
 }

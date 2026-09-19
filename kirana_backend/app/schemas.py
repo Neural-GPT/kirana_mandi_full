@@ -112,6 +112,12 @@ class ShopCreate(BaseModel):
     delivery_radius_km: float | None = None
     delivery_fee: float | None = None
     service_ids: list[str] = []
+    # --- White-label branding (all optional -- a shop that hasn't set
+    # these up yet just renders with the app's default theme) ---
+    logo_url: str | None = None
+    banner_url: str | None = None
+    primary_color: str | None = None
+    secondary_color: str | None = None
 
 
 class ShopUpdate(ShopCreate):
@@ -138,6 +144,11 @@ class ShopOut(OrmBase):
     delivery_fee: float | None
     created_at: datetime
     service_ids: list[str] = []
+    logo_url: str | None = None
+    banner_url: str | None = None
+    primary_color: str | None = None
+    secondary_color: str | None = None
+    shop_code: str
 
 
 class ShopServiceIdsUpdate(BaseModel):
@@ -150,6 +161,32 @@ class ShopAvailabilityUpdate(BaseModel):
 
 class ShopStatusUpdate(BaseModel):
     status: str  # approved | rejected
+
+
+# --- White-labeling ---
+class ShopBrandingOut(BaseModel):
+    """
+    Everything a client app needs to skin itself for one shop -- served
+    publicly (no auth) so a freshly-installed white-label build, which
+    has no logged-in user yet, can still render the right logo/colors on
+    its very first screen. Deliberately a narrower shape than ShopOut
+    (no owner/contact internals) since this is public.
+    """
+
+    shop_id: str
+    shop_name: str
+    logo_url: str | None
+    banner_url: str | None
+    primary_color: str | None
+    secondary_color: str | None
+    region_id: str
+    contact_number: str
+    status: str  # pending | approved | rejected -- client should refuse to load a non-approved shop
+    shop_code: str
+
+
+class ShopCodeLookupOut(BaseModel):
+    shop_id: str
 
 
 # --- Products ---

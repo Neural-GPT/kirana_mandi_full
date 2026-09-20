@@ -40,8 +40,16 @@ runs:
 
     - uses: subosito/flutter-action@v2
       with:
-        flutter-version: "3.24.x"
         channel: stable
+        # No flutter-version pin: Flutter 3.24's own internal build
+        # tooling (flutter_tools/gradle/.../flutter.groovy) fails to
+        # compile under the Gradle/JDK combination GitHub's runners now
+        # ship ("unable to resolve class groovy.xml.QName") -- this was
+        # a bug in Flutter's tooling itself, fixed in later stable
+        # releases. Pinning JDK 17 above doesn't work around it because
+        # the failure is in Flutter's bundled Groovy script, not
+        # anything version-controlled by this project. Always building
+        # against current stable avoids re-hitting this.
 
     - name: Derive a unique Android application id
       id: app_id

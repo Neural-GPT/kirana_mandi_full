@@ -54,7 +54,6 @@ permissions:
   contents: write # needed to publish/overwrite the per-shop GitHub Release
 
 env:
-  FLUTTER_VERSION: "3.24.x"
   APP_DIR: kirana_marketplace
 
 jobs:
@@ -92,6 +91,7 @@ jobs:
           secondary_color: ${{ matrix.shop.secondary_color || '' }}
           logo_url: ${{ matrix.shop.logo_url || '' }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          api_base_url: ${{ vars.API_BASE_URL }}
 
   # --- Single-shop path: manual dispatch or backend-triggered ----------
   build-single-shop:
@@ -107,3 +107,4 @@ jobs:
           secondary_color: ${{ inputs.secondary_color }}
           logo_url: ${{ inputs.logo_url }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          api_base_url: ${{ vars.API_BASE_URL }}

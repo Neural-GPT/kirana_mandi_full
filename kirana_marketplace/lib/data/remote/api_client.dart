@@ -32,7 +32,16 @@ class ApiClient {
   // multi-shop build never sets this and nothing changes for it.
   String? _shopId;
 
-  static const _timeout = Duration(seconds: 15);
+  static const _timeout = Duration(seconds: 45);
+  // Render's free tier (and similar host-on-idle tiers) spins the
+  // backend down after inactivity -- the first request after a while
+  // wakes it back up, which alone can take 30-50s. A short timeout here
+  // doesn't make that wait shorter, it just makes the request fail
+  // (looking like a broken/slow login) partway through a wake-up that
+  // would have succeeded a few seconds later, forcing a retry -- which
+  // is what a *second*, now-warm request actually succeeds quickly. 45s
+  // covers a cold start; once warm, real requests still return in
+  // milliseconds and never get close to this ceiling.
 
   ApiClient({
     required this.baseUrl,

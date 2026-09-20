@@ -1,0 +1,111 @@
+name: Build white-label shop APK
+
+# "Generate My App" — triggered by a shopkeeper tapping the button on
+# the App Deployment screen (the backend calls this workflow's
+# `workflow_dispatch` REST endpoint -- see
+# kirana_backend/app/routers/deploy.py), or manually from the Actions
+# tab, or in bulk from `shops.json` on a push to main.
+#
+# Produces an APK that is white-labeled at the SYSTEM level, not just
+# inside the Flutter app:
+#   - a unique Android applicationId per shop, so a customer can install
+#     several different shops' apps side by side instead of one
+#     overwriting another (Android identifies an "app" by this id, not
+#     by its name)
+#   - the launcher name (home screen / app drawer / Settings > Apps),
+#     via the shopAppLabel Gradle property -> AndroidManifest.xml's
+#     android:label="${appLabel}"
+#   - the launcher icon, regenerated from the shop's logo_url via
+#     flutter_launcher_icons before the build
+#
+# The finished APK is published as a GitHub Release asset under a
+# per-shop tag (`shop-<shop_id>`) that's overwritten on every rebuild,
+# so the shopkeeper gets one stable link to share with customers rather
+# than a new URL every time they update their branding.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "shops.json"
+      - ".github/workflows/build_apk.yml"
+  workflow_dispatch:
+    inputs:
+      shop_id:
+        description: "SHOP_ID (uuid) -- also used to derive a unique Android application id"
+        required: true
+      app_name:
+        description: 'APP_NAME shown on the home screen, e.g. "Sharma General Store"'
+        required: true
+      primary_color:
+        description: "PRIMARY_COLOR as a 6-digit hex, no '#', e.g. 2E7D32"
+        required: false
+        default: "2E7D32"
+      secondary_color:
+        description: "SECONDARY_COLOR as a 6-digit hex, no '#' (optional)"
+        required: false
+        default: ""
+      logo_url:
+        description: "Direct URL to the shop's logo image (used as the launcher icon). Leave blank to keep the default icon."
+        required: false
+        default: ""
+
+permissions:
+  contents: write # needed to publish/overwrite the per-shop GitHub Release
+
+env:
+  FLUTTER_VERSION: "3.24.x"
+  APP_DIR: kirana_marketplace
+
+jobs:
+  # --- Bulk path: one APK per shop listed in shops.json -----------------
+  load-matrix:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      shops: ${{ steps.read.outputs.shops }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: |
+          if [ ! -f shops.json ]; then
+            echo "shops=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "shops=$(jq -c '[.[] | select(has("_comment") | not)]' shops.json)" >> "$GITHUB_OUTPUT"
+
+  build-matrix:
+    needs: load-matrix
+    if: needs.load-matrix.outputs.shops != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shop: ${{ fromJson(needs.load-matrix.outputs.shops) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-shop-apk
+        with:
+          shop_id: ${{ matrix.shop.shop_id }}
+          app_name: ${{ matrix.shop.app_name }}
+          primary_color: ${{ matrix.shop.primary_color }}
+          secondary_color: ${{ matrix.shop.secondary_color || '' }}
+          logo_url: ${{ matrix.shop.logo_url || '' }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          api_base_url: ${{ vars.API_BASE_URL }}
+
+  # --- Single-shop path: manual dispatch or backend-triggered ----------
+  build-single-shop:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-shop-apk
+        with:
+          shop_id: ${{ inputs.shop_id }}
+          app_name: ${{ inputs.app_name }}
+          primary_color: ${{ inputs.primary_color }}
+          secondary_color: ${{ inputs.secondary_color }}
+          logo_url: ${{ inputs.logo_url }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          api_base_url: ${{ vars.API_BASE_URL }}

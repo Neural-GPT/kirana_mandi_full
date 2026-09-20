@@ -20,6 +20,9 @@ inputs:
     default: ""
   github_token:
     required: true
+  api_base_url:
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -79,7 +82,7 @@ runs:
           --split-per-abi \
           -PshopAppId=${{ steps.app_id.outputs.app_id }} \
           -PshopAppLabel="${{ inputs.app_name }}" \
-          --dart-define=API_BASE_URL=${{ vars.API_BASE_URL }} \
+          --dart-define=API_BASE_URL=${{ inputs.api_base_url }} \
           --dart-define=SHOP_ID=${{ inputs.shop_id }} \
           --dart-define=APP_NAME="${{ inputs.app_name }}" \
           --dart-define=PRIMARY_COLOR=${{ inputs.primary_color }} \

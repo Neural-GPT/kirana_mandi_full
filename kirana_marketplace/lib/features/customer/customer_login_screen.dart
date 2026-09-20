@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
@@ -19,11 +21,14 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  bool _showWakingUpHint = false;
+  Timer? _hintTimer;
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _hintTimer?.cancel();
     super.dispose();
   }
 
@@ -32,8 +37,26 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
     final auth = context.read<AuthController>();
     final phone = _phoneController.text.trim();
     final name = _nameController.text.trim();
+
+    // Most of the time this returns in well under a second. When it
+    // doesn't, it's almost always the backend waking up from an idle
+    // spin-down (see ApiClient's timeout comment) rather than anything
+    // actually wrong -- say so after a few seconds instead of leaving a
+    // bare spinner that looks stuck or broken.
+    setState(() => _showWakingUpHint = false);
+    _hintTimer?.cancel();
+    _hintTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _showWakingUpHint = true);
+    });
+
     final debugOtp = await auth.sendOtp(phone);
+    _hintTimer?.cancel();
     if (!mounted) return;
+    setState(() => _showWakingUpHint = false);
+    if (auth.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(auth.error!)));
+      return;
+    }
     Navigator.pushNamed(context, '/otp', arguments: {
       'phone': phone,
       'role': AppConstants.roleCustomer,
@@ -93,6 +116,15 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                       )
                     : const Text('Send OTP'),
               ),
+              if (_showWakingUpHint) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'Connecting to the server -- this can take a little longer '
+                  'right after a period of inactivity.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+              ],
             ],
           ),
         ),

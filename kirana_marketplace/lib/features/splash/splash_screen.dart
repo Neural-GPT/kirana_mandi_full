@@ -28,17 +28,28 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   bool _navigated = false;
   bool _showManualContinue = false;
+  bool _showWakingUpHint = false;
   Timer? _stuckTimer;
+  Timer? _hintTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
 
-    // Safety net: if nothing has navigated within 6 seconds (DB stuck,
-    // plugin not responding, etc.), offer a manual way out instead of an
-    // infinite spinner.
-    _stuckTimer = Timer(const Duration(seconds: 6), () {
+    // Most first-launch waits longer than a couple seconds are the
+    // backend waking up from an idle spin-down (see ApiClient's comment
+    // on its timeout), not something actually broken -- say so instead
+    // of leaving a bare spinner that looks stuck.
+    _hintTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted && !_navigated) setState(() => _showWakingUpHint = true);
+    });
+
+    // Safety net: if nothing has navigated within 30 seconds (DB stuck,
+    // plugin not responding, or -- most commonly on a free-tier host --
+    // the backend still waking up from an idle spin-down), offer a
+    // manual way out instead of an infinite spinner.
+    _stuckTimer = Timer(const Duration(seconds: 30), () {
       if (mounted && !_navigated) {
         setState(() => _showManualContinue = true);
       }
@@ -48,6 +59,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void dispose() {
     _stuckTimer?.cancel();
+    _hintTimer?.cancel();
     super.dispose();
   }
 
@@ -55,14 +67,21 @@ class _SplashScreenState extends State<SplashScreen> {
     if (_navigated || !mounted) return;
     _navigated = true;
     _stuckTimer?.cancel();
+    _hintTimer?.cancel();
     Navigator.pushReplacementNamed(context, route);
   }
 
   Future<void> _bootstrap() async {
     try {
       final auth = context.read<AuthController>();
+      // Matches ApiClient's own 45s timeout (see its comment) -- a
+      // shorter timeout here was cutting off session restoration mid
+      // cold-start-wake and wrongly treating a logged-in user as
+      // logged-out, which is why this used to look like "login is slow"
+      // (really: silently signed out, then re-logging in on a now-warm
+      // server worked fine).
       await auth.restoreSession().timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 45),
         onTimeout: () {},
       );
       if (!mounted || _navigated) return;
@@ -89,7 +108,7 @@ class _SplashScreenState extends State<SplashScreen> {
           final shopRepo = context.read<ShopRepository>();
           final shop = await shopRepo
               .getShopByOwnerId(user.id)
-              .timeout(const Duration(seconds: 5), onTimeout: () => null);
+              .timeout(const Duration(seconds: 45), onTimeout: () => null);
           if (!mounted || _navigated) return;
           _goTo(shop == null ? '/shopkeeper/shop-setup' : '/shopkeeper/dashboard');
           return;
@@ -123,6 +142,15 @@ class _SplashScreenState extends State<SplashScreen> {
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             const CircularProgressIndicator(),
+            if (_showWakingUpHint && !_showManualContinue) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Connecting to the server -- this can take a little longer '
+                'right after a period of inactivity.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ],
             if (_showManualContinue) ...[
               const SizedBox(height: 24),
               const Text(

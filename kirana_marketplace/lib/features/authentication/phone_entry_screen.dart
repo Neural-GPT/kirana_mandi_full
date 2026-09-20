@@ -28,6 +28,10 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
     final phone = _phoneController.text.trim();
     final debugOtp = await auth.sendOtp(phone);
     if (!mounted) return;
+    if (auth.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(auth.error!)));
+      return;
+    }
     Navigator.pushNamed(context, '/otp', arguments: {
       'phone': phone,
       'role': widget.role,

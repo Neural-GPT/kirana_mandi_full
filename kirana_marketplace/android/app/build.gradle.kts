@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -21,8 +24,10 @@ plugins {
 // separate apps a customer can keep side by side. See the workflow for
 // how it's derived from shop_id.
 val shopAppId: String = (project.findProperty("shopAppId") as String?)
+    ?: System.getenv("SHOP_APP_ID")
     ?: "com.example.kirana_mandi"
 val shopAppLabel: String = (project.findProperty("shopAppLabel") as String?)
+    ?: System.getenv("SHOP_APP_LABEL")
     ?: "Kirana Mandi"
 
 android {
@@ -60,8 +65,8 @@ android {
         // keystore keep working exactly as before.
         val keystorePropertiesFile = rootProject.file("key.properties")
         if (keystorePropertiesFile.exists()) {
-            val keystoreProperties = java.util.Properties()
-            keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+            val keystoreProperties = Properties()
+            keystoreProperties.load(FileInputStream(keystorePropertiesFile))
             create("release") {
                 storeFile = file(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String

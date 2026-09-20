@@ -69,6 +69,14 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
     try {
       return await _authRepository.sendOtp(phone);
+    } catch (e) {
+      // Was previously uncaught here -- a timeout (e.g. the backend
+      // waking up from an idle spin-down) would throw straight through
+      // this method into the login screen's un-guarded await, which
+      // looked like the app hanging or crashing rather than a clear
+      // "couldn't send the code, try again" message.
+      _error = e.toString();
+      return null;
     } finally {
       _busy = false;
       notifyListeners();

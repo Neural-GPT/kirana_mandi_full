@@ -27,6 +27,17 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - uses: actions/setup-java@v4
+      with:
+        distribution: "temurin"
+        java-version: "17"
+        # Flutter 3.24's bundled Gradle/Groovy scripts (flutter.groovy)
+        # don't compile under the JDK 21 that ubuntu-latest now ships by
+        # default ("unable to resolve class groovy.xml.QName") -- pin to
+        # 17, which is what this Flutter/Gradle combo actually supports,
+        # before the Flutter toolchain step below picks up whatever JDK
+        # is already on PATH.
+
     - uses: subosito/flutter-action@v2
       with:
         flutter-version: "3.24.x"
@@ -58,17 +69,36 @@ runs:
 
     - name: Download shop logo for the launcher icon
       if: inputs.logo_url != ''
+      id: logo
       shell: bash
       working-directory: kirana_marketplace
       run: |
         mkdir -p assets/icon
-        curl -sSL --fail "${{ inputs.logo_url }}" -o assets/icon/icon.png || {
-          echo "::warning::Could not download logo_url, keeping the default icon.";
-          exit 0;
-        }
+        RAW="$RUNNER_TEMP/shop_logo_raw"
+        if ! curl -sSL --fail "${{ inputs.logo_url }}" -o "$RAW"; then
+          echo "::warning::Could not download logo_url, keeping the default icon."
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        # curl succeeding only means we got SOME response with a 2xx
+        # status -- it says nothing about whether that response is an
+        # actual, decodable image (a redirect landing page, an
+        # unsupported format like webp/avif, or a corrupt file all pass
+        # curl --fail just fine and then crash
+        # flutter_launcher_icons/Skia deep inside the next step).
+        # ImageMagick (preinstalled on GitHub's ubuntu-latest runners)
+        # re-encodes whatever it is into a clean, flattened, correctly
+        # sized PNG, or fails clearly right here instead.
+        if convert "$RAW" -resize 1024x1024 -background white -flatten assets/icon/icon.png; then
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::logo_url didn't decode as an image, keeping the default icon."
+          rm -f assets/icon/icon.png
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Regenerate the Android launcher icon from the shop's logo
-      if: inputs.logo_url != ''
+      if: inputs.logo_url != '' && steps.logo.outputs.ok == 'true'
       shell: bash
       working-directory: kirana_marketplace
       run: dart run flutter_launcher_icons

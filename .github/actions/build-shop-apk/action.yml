@@ -41,6 +41,7 @@ runs:
     - uses: subosito/flutter-action@v2
       with:
         channel: stable
+        cache: true
         # No flutter-version pin: Flutter 3.24's own internal build
         # tooling (flutter_tools/gradle/.../flutter.groovy) fails to
         # compile under the Gradle/JDK combination GitHub's runners now
@@ -50,6 +51,26 @@ runs:
         # the failure is in Flutter's bundled Groovy script, not
         # anything version-controlled by this project. Always building
         # against current stable avoids re-hitting this.
+        # `cache: true` caches the downloaded Flutter SDK itself
+        # (several hundred MB) across runs.
+
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        # Keyed on the wrapper/build files that determine which Gradle
+        # distribution and dependencies get downloaded -- the first
+        # build after any of these change still pays the full ~2-3 min
+        # Gradle/dependency download cost, but every other build (a
+        # rebuild for the same shop, or a different shop) reuses it.
+        # Between this and Flutter SDK caching above, most of the 6+ min
+        # first-build time was one-time download cost, not the actual
+        # compile.
+        key: gradle-${{ runner.os }}-${{ hashFiles('kirana_marketplace/android/**/*.gradle*', 'kirana_marketplace/android/gradle/wrapper/gradle-wrapper.properties') }}
+        restore-keys: |
+          gradle-${{ runner.os }}-
 
     - name: Derive a unique Android application id
       id: app_id

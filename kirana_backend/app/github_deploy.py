@@ -79,6 +79,15 @@ def get_apk_status(shop_id: str) -> dict:
     Looks up the per-shop GitHub Release (tag `shop-{shop_id}`) the
     workflow publishes/overwrites on every successful build. Returns a
     dict matching schemas.ApkStatusOut's fields; never raises.
+
+    `download_url` is deliberately NOT GitHub's own `browser_download_url`
+    -- that only works in a browser that's logged into GitHub with
+    access to this repo, which a customer (or the shopkeeper, in most
+    browsers) doesn't have if the repo is private. It's set by the
+    caller (routers/deploy.py) to this backend's own public
+    /shops/{shop_id}/download route instead, which proxies the actual
+    bytes via fetch_apk_bytes() below using our own token -- so the
+    link works for anyone, without the repo needing to be public.
     """
     settings = get_settings()
     result = {
@@ -105,7 +114,7 @@ def get_apk_status(shop_id: str) -> dict:
         if apk_asset is None:
             return result  # release exists but the build/upload hasn't finished yet
         result["status"] = "ready"
-        result["download_url"] = apk_asset.get("browser_download_url")
+        result["download_url"] = "ready"  # placeholder; overwritten by the caller with our own proxy URL
         published_at = release.get("published_at")
         if published_at:
             result["built_at"] = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
@@ -113,3 +122,56 @@ def get_apk_status(shop_id: str) -> dict:
     except httpx.HTTPError:
         logger.exception("GitHub release lookup failed")
         return result
+
+
+def fetch_apk_bytes(shop_id: str) -> bytes | None:
+    """
+    Downloads the actual APK bytes for a shop's latest release, using
+    OUR OWN GitHub token -- this is what lets /shops/{shop_id}/download
+    (a PUBLIC, unauthenticated backend route) work for any customer even
+    when the GitHub repo itself is private.
+
+    GitHub's private-asset download is a two-step redirect: requesting
+    the asset's API url with `Accept: application/octet-stream` returns
+    a 302 to a presigned, short-lived storage URL. That second URL must
+    be fetched WITHOUT our GitHub Authorization header -- presigned
+    storage URLs reject requests that carry an extra, unrelated auth
+    header. httpx (like requests) would otherwise forward that header
+    across the redirect by default, so the two hops are done manually
+    here instead of relying on follow_redirects.
+    """
+    settings = get_settings()
+    if not settings.github_deploy_configured:
+        return None
+
+    tag = f"shop-{shop_id}"
+    release_url = f"{_API_BASE}/repos/{settings.github_repo}/releases/tags/{tag}"
+    try:
+        release_resp = httpx.get(release_url, headers=_headers(settings.github_token), timeout=15)
+        if release_resp.status_code != 200:
+            return None
+        assets = release_resp.json().get("assets", [])
+        apk_asset = next((a for a in assets if a.get("name", "").endswith(".apk")), None)
+        if apk_asset is None:
+            return None
+
+        asset_api_url = apk_asset["url"]  # .../releases/assets/{id} -- NOT browser_download_url
+        with httpx.Client(follow_redirects=False, timeout=60) as client:
+            first = client.get(
+                asset_api_url,
+                headers={**_headers(settings.github_token), "Accept": "application/octet-stream"},
+            )
+            if first.status_code in (301, 302, 303, 307, 308):
+                redirect_url = first.headers.get("location")
+                if not redirect_url:
+                    return None
+                final = httpx.get(redirect_url, timeout=60)  # no auth header on purpose -- see docstring
+                final.raise_for_status()
+                return final.content
+            if first.status_code == 200:
+                return first.content
+            logger.warning("Unexpected status downloading APK asset: %s", first.status_code)
+            return None
+    except httpx.HTTPError:
+        logger.exception("GitHub APK asset download failed")
+        return None

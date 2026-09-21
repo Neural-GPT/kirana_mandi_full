@@ -2,11 +2,11 @@
 
 Two folders:
 
-- **`kirana_marketplace/`** — the Flutter mobile app. See its own
+- **`kirana_marketplace/`**: the Flutter mobile app. See its own
   `README.md` for setup, environment variables (`--dart-define` for
   admin login + TextBee OTP), and a feature-by-feature rundown of what's
   implemented.
-- **`kirana_backend/`** — the FastAPI backend (Aiven Postgres in
+- **`kirana_backend/`**: the FastAPI backend (Aiven Postgres in
   production, deployable on Render). See its own `README.md` for local
   dev setup and step-by-step Aiven + Render deployment instructions.
 
